@@ -1,0 +1,28 @@
+/* une design system — webfonts (로컬 self-hosted 사본)
+   원본 tokens/fonts.css의 CDN @import 3건(spoqa.github.io·jsdelivr·googleapis)을 제거하고
+   apps/web/public/fonts/ 의 SpoqaHanSansNeo TTF 3종으로 교체한 로컬 @font-face 선언.
+   Pretendard GOV·Noto Sans KR는 미사용 — --font-ui(Spoqa Han Sans Neo)만 로드한다. */
+
+@font-face {
+  font-family: 'Spoqa Han Sans Neo';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/SpoqaHanSansNeo-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Spoqa Han Sans Neo';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/SpoqaHanSansNeo-Medium.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Spoqa Han Sans Neo';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/SpoqaHanSansNeo-Bold.ttf') format('truetype');
+}

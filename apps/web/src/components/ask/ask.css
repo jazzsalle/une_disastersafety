@@ -1,0 +1,316 @@
+/* AskChatPanel — 질의응답·정합성·챗봇 패널 스타일 (UNE DS 토큰만 사용) */
+
+.ask-panel {
+  background: var(--color-surface-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* 탭 바 */
+.ask-tabbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px 0;
+  border-bottom: 1px solid var(--color-border-default);
+  flex-shrink: 0;
+}
+
+/* DS 컴포넌트 클릭 래퍼(무장식 버튼) */
+.ask-pressable {
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.ask-pressable:disabled {
+  cursor: not-allowed;
+}
+.ask-pressable:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.ask-pressable-block {
+  display: block;
+  width: 100%;
+}
+
+/* 탭 본문 */
+.ask-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 질의 입력 행 */
+.ask-inputrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  flex-shrink: 0;
+}
+
+.ask-input {
+  flex: 1;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  background: var(--color-surface-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  letter-spacing: -0.03em;
+}
+.ask-input::placeholder {
+  color: var(--color-text-disabled);
+}
+.ask-input:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+  border-color: var(--color-border-brand);
+}
+.ask-input:disabled {
+  background: var(--color-surface-disabled);
+  color: var(--color-text-disabled);
+}
+
+/* 스크롤 콘텐츠 */
+.ask-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 카드(응답·섹션) — DS Card는 children 미지원이라 토큰 기반 컨테이너 사용 */
+.ask-card {
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  background: var(--color-surface-primary);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ask-card-head {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ask-answer-text {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+/* 근거 문서 없음 */
+.ask-noevidence {
+  border: 1px solid var(--color-border-error);
+  border-radius: 8px;
+  background: var(--color-surface-error-subtle);
+  color: var(--color-text-error);
+  padding: 10px 12px;
+}
+
+/* 섹션 제목 */
+.ask-section-title {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* 빈 상태 */
+.ask-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 2px;
+}
+.ask-chiprow {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 로딩 */
+.ask-loading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 2px;
+  color: var(--color-text-secondary-2);
+}
+
+/* rag_answer_id 툴팁 */
+.ask-idwrap {
+  position: relative;
+  display: inline-flex;
+}
+.ask-idtrigger {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: -0.03em;
+  color: var(--color-text-helper);
+  border-bottom: 1px dotted var(--color-border-strong);
+}
+.ask-tooltip-pop {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 30;
+}
+
+/* Citation 목록 */
+.ask-citations {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* 검증 정보(Switch on) 상세 */
+.ask-verify-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-top: 1px solid var(--color-border-muted);
+  padding-top: 8px;
+  color: var(--color-text-secondary-2);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: -0.03em;
+  word-break: break-all;
+}
+
+/* 토글 행 */
+.ask-switchrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+/* 요인 기여도 바 */
+.ask-factor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ask-factor-label {
+  width: 32px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+}
+.ask-factor-track {
+  flex: 1;
+  min-width: 0;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-surface-gray-subtle);
+  overflow: hidden;
+}
+.ask-factor-fill {
+  height: 100%;
+  border-radius: 4px;
+}
+.ask-factor-value {
+  width: 40px;
+  flex-shrink: 0;
+  text-align: right;
+  color: var(--color-text-helper);
+}
+
+/* 하단 고지 */
+.ask-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-top: 1px solid var(--color-border-muted);
+  color: var(--color-text-disabled);
+  flex-shrink: 0;
+}
+
+/* 챗봇 대화 */
+.ask-chatlist {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ask-bubble {
+  max-width: 85%;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ask-bubble-user {
+  align-self: flex-end;
+  background: var(--color-surface-brand-subtle);
+  border: 1px solid var(--color-interaction-primary-border-subtle-default);
+}
+.ask-bubble-assistant {
+  align-self: flex-start;
+  background: var(--color-surface-gray-subtle);
+  border: 1px solid var(--color-border-muted);
+}
+.ask-bubble-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-primary);
+}
+.ask-bubble-meta {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.ask-bubble-excerpts {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--color-text-secondary-2);
+}
+.ask-bubble-excerpts li {
+  margin: 2px 0;
+}
+
+/* 모달 */
+.ask-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ask-modal-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-end;
+  max-height: 90vh;
+}

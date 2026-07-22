@@ -1,0 +1,8 @@
+/* UNE Design System 진입 CSS (사본)
+   원본: UNE Design System/une-design-system/project/styles.css
+   변경: LNB 유아이키트 fig-assets.css import 제거(미사용). */
+@import './tokens/fonts.css';
+@import './tokens/fig-tokens.css';
+@import './tokens/typography.css';
+@import './components/display/fig-assets.css';
+@import './components/overlay/fig-assets.css';

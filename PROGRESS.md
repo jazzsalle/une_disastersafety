@@ -20,10 +20,14 @@
   - BM25+메타필터 검색(similarity_factors 4요인, kiwipiepy 폴백 토크나이저), ask 근거 제시율 100%(no_evidence 엣지 포함), chat=UNI RAG 프록시(JWT 캐시·401 재로그인·SSE 중계·mock 폴백·비밀 미노출)
   - pytest **77건 통과**(외부 호출 격리 — 죽은 프록시 재실행으로 검증)
 - **UNI RAG 실연동 확인(사용자 제공 계정)**: `/auth/login` **성공(HTTP 200, JWT 발급)** — 계정 .env에만 기록(커밋 안 됨). `POST /chat/`은 **HTTP 500**(모델 3종 available:false, GPU 서버 미가동 추정) → 백엔드는 5xx 시 mock 폴백으로 정상 동작. **서버 가동되면 코드 수정 없이 즉시 실연동됨**
-- Phase 3 진행 (아래 In progress 참조)
+- **Phase 3 완료 — evaluator PASS(10항목 전부)**: apps/web React18+Vite 대시보드
+  - UNE DS 사본(src/ds, CDN 제거·SpoqaHanSansNeo 로컬 폰트)·3열 레이아웃·다크 토글
+  - 패널: ①상황입력(ChoiceChip 5종·동적 Segment·키워드 Chip·buildEvent) ②VWorld WMTS 지도(Base/midnight, L1~L3, 키 미설정 시 안내) ③Top-K 카드(지도 하이라이트 연동) ④상세조회(지구 Modal·하천 표·안양천 plan_version 배지) ⑤정합성(Citation·기여도 바·검증 토글) ⑥챗봇(SSE 스트리밍·mock 배지·history) + 판단기준 탭
+  - `npm run build` 통과, 통합 검증서 결합 버그 5건 수정(Toast 배선·Badge 변형·passage 하이라이트·IME·card.html CDN 제거)
+- Phase 4 진행 (아래 In progress 참조)
 
 ## In progress
-- Phase 3 (프론트엔드 UI — 모듈 5종+챗봇) — 진행 중이면 이 항목이 최신이 아닐 수 있음. git log와 아래 기록 참조
+- Phase 4 (통합·시나리오 검증) — 진행 중이면 이 항목이 최신이 아닐 수 있음. git log와 아래 기록 참조
 
 ## Next steps
 1. Phase 2 → 3 → 4 순차 진행 (각각 planner→generator→evaluator, PASS 시 커밋)

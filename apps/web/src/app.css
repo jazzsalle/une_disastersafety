@@ -1,0 +1,97 @@
+/* 앱 셸 레이아웃 — 헤더 + 3열(좌 300px / 중 유동 min 480px / 우 400px).
+   UNE DS 토큰 변수만 사용. 1280px 미만에서 우측 열이 하단 스택으로 이동. */
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+  background: var(--color-surface-muted);
+}
+
+/* 헤더 — AppHeader가 내부를 채운다(T3 교체 대상) */
+.app-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  padding: 0 20px;
+  background: var(--color-surface-primary);
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+/* 본문 3열 그리드 */
+.app-main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(480px, 1fr) 400px;
+  grid-template-areas: 'left center right';
+  gap: 12px;
+  padding: 12px;
+}
+
+.app-col-left {
+  grid-area: left;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-col-center {
+  grid-area: center;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 중앙 상단: 지도 뷰어(유동) / 하단: 챗 패널(고정 비율) */
+.app-map {
+  flex: 3;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-chat {
+  flex: 2;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-col-right {
+  grid-area: right;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 각 열의 직계 패널이 열 높이를 채우도록 */
+.app-col-left > *,
+.app-col-right > *,
+.app-map > *,
+.app-chat > * {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 1280px 미만 — 우측 열을 하단 전폭 스택으로 */
+@media (max-width: 1279px) {
+  .app-main {
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-areas:
+      'left center'
+      'right right';
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .app-col-right {
+    max-height: 480px;
+  }
+}
