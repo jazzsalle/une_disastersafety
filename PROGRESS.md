@@ -15,17 +15,22 @@
   - `python pipeline/run_all.py` 멱등 실행·report.md 생성 확인
 - **UNI RAG 챗봇 연동 설계 반영(사용자 취침 전 지시)**: `docs/06_UNI_RAG_챗봇_연동.md` 신규 작성, DESIGN.md v0.3(LLM 이원화: ask=Claude/mock, chat=UNI RAG main chat API 프록시)·CLAUDE.md(모듈 ⑥ 챗봇, Phase 2/3 산출물 확장)·evaluation_criteria.md(Phase 2 /api/chat·Phase 3 챗봇 패널 기준 추가)·.env.example(UNI_RAG_* 4종) 갱신
   - UNI RAG OpenAPI(http://221.147.100.161:8000/docs) 분석: main chat = `POST /chat/`(JWT·SSE), 로그인 = `POST /auth/login`(UNE 계정), 모델 3종(qwen3.5-35b 기본)
-- Phase 2 진행 (아래 In progress 참조)
+- **Phase 2 완료 — evaluator PASS(11항목 전부)**: apps/api FastAPI 백엔드
+  - 라우터 8종(meta/criteria/districts/rivers/geo/search/ask/chat, 자동 등록)·services 어댑터 4종(corpus/retrieval/llm/uni_rag — T3Q 교체 대비 시그니처 고정)
+  - BM25+메타필터 검색(similarity_factors 4요인, kiwipiepy 폴백 토크나이저), ask 근거 제시율 100%(no_evidence 엣지 포함), chat=UNI RAG 프록시(JWT 캐시·401 재로그인·SSE 중계·mock 폴백·비밀 미노출)
+  - pytest **77건 통과**(외부 호출 격리 — 죽은 프록시 재실행으로 검증)
+- **UNI RAG 실연동 확인(사용자 제공 계정)**: `/auth/login` **성공(HTTP 200, JWT 발급)** — 계정 .env에만 기록(커밋 안 됨). `POST /chat/`은 **HTTP 500**(모델 3종 available:false, GPU 서버 미가동 추정) → 백엔드는 5xx 시 mock 폴백으로 정상 동작. **서버 가동되면 코드 수정 없이 즉시 실연동됨**
+- Phase 3 진행 (아래 In progress 참조)
 
 ## In progress
-- Phase 2 (검색·RAG API + UNI RAG 챗봇 프록시) — 진행 중이면 이 항목이 최신이 아닐 수 있음. git log와 아래 기록 참조
+- Phase 3 (프론트엔드 UI — 모듈 5종+챗봇) — 진행 중이면 이 항목이 최신이 아닐 수 있음. git log와 아래 기록 참조
 
 ## Next steps
 1. Phase 2 → 3 → 4 순차 진행 (각각 planner→generator→evaluator, PASS 시 커밋)
 2. **내일(회사 PC) 사용자 결정·보완 필요 사항 — 아래 "결정 필요" 섹션 처리**
 
 ## 결정 필요 (사용자 확인 대기 — 권장안으로 우선 구현함)
-1. **UNI RAG 계정**: `/auth/login`에 쓸 UNE 계정(개인 vs 서비스 계정) 미정. 자격증명 미보유로 **실 로그인·chat 실호출 미검증** — mock 폴백으로 구현·테스트함. → 회사에서 .env에 `UNI_RAG_ACCOUNT/PASSWORD` 기입 후 실연동 확인 필요
+1. ~~UNI RAG 계정~~ **(해소 — 취침 중 사용자 제공)**: 계정 .env 기입 완료, 로그인 성공 확인. 잔여: **chat 실호출은 UNI RAG 모델 서버(GPU) 가동 후 재확인 필요**(현재 500 → mock 폴백 동작). 이 계정이 개인 계정이므로 데모용 서비스 계정 전환 여부는 추후 판단
 2. **UNI RAG 모델 가용성**: `GET /models/` 조회 결과 3종(qwen3.5-35b·exaone-32b·qwen3-coder-next) 모두 `available:false`(2026-07-23 23시경, GPU 서버 대기 추정). 실 데모 전 가동 확인 필요. 권장 기본값 qwen3.5-35b로 구현
 3. **재난 코퍼스 UNI RAG 업로드 여부**: `POST /documents/upload` + `source` 파라미터로 재난 문서를 UNI RAG 쪽에서 참조시킬지 → **권장(채택): 보류** — 근거응답(citations)은 로컬 BM25+Claude/mock이 담당, 챗봇은 자유 대화용
 4. **세션 관리**: UNI RAG `session_id` 대화 연속성 → **권장(채택): POC는 프론트 history 전달로 단순화**, 세션 API는 2차

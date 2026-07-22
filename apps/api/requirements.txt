@@ -1,0 +1,15 @@
+# Disaster-safety AI POC backend (Phase 2)
+# Comments are in English on purpose (cp949 pip issue on Windows).
+
+fastapi>=0.111
+uvicorn[standard]>=0.30
+pydantic>=2
+rank-bm25>=0.2.2
+httpx>=0.27
+pytest>=8
+
+# Optional: real LLM answers via Claude API (falls back to mock without ANTHROPIC_API_KEY)
+# anthropic>=0.34
+
+# Optional: Korean morphological tokenizer for BM25 (code has an import guard)
+# kiwipiepy>=0.18
