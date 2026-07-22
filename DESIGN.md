@@ -1,8 +1,8 @@
 # 재난안전 AI 시범 서비스 — 설계서 (1차 POC)
 
-- 작성일: 2026-07-23 · 버전 v0.2 (착수 사업수행계획서 v0.9 반영)
+- 작성일: 2026-07-23 · 버전 v0.3 (착수 사업수행계획서 v0.9 반영, UNI RAG 챗봇 연동 추가)
 - 상위 문서: `docs/00_사업수행계획서_분석.md` (사업 컨텍스트) · `docs/01_기획서.md` (목적·범위·시나리오) · `docs/02_데이터분석.md` (원시자료 분석)
-- 화면 설계: `docs/03_화면설계.md`
+- 화면 설계: `docs/03_화면설계.md` · 챗봇 연동: `docs/06_UNI_RAG_챗봇_연동.md`
 
 ## 1. 시스템 개요
 
@@ -39,7 +39,8 @@
 | 데이터 파이프라인 | Python 3.11, PyMuPDF(텍스트 — poppler 계열은 한글 유실 확인됨) + pdfplumber(표), openpyxl | 로컬 배치 처리, 표 추출 필요 |
 | 검색 | rank-bm25 (한국어 형태 정규화: kiwipiepy 선택 적용) | POC 규모(문서 6종)에 벡터DB 불요, 재현성. 본사업 스택(Milvus/OpenSearch/Neo4j/PostGIS)은 T3Q 연계 시 교체 |
 | 백엔드 | FastAPI + uvicorn | 경량 API, pydantic 스키마로 메타 정의 반영. T3Q RAG API 계약의 mock 서버 겸용 |
-| LLM | Claude API `claude-sonnet-5` (환경변수 `ANTHROPIC_API_KEY`) | RAG 응답 생성·인용. 키 없으면 결정적 mock 폴백 (본사업은 Llama3 — 어댑터로 분리) |
+| LLM(근거응답) | Claude API `claude-sonnet-5` (환경변수 `ANTHROPIC_API_KEY`) | RAG 응답 생성·인용(`/api/ask`). 키 없으면 결정적 mock 폴백 (본사업은 Llama3 — 어댑터로 분리) |
+| LLM(챗봇) | **UNI RAG System main chat API** `POST /chat/` (SSE, `UNI_RAG_BASE_URL`=http://221.147.100.161:8000, UNE 계정 `/auth/login` JWT) | 대화형 챗봇(⑥). 자격증명 미설정/호출 실패 시 mock 폴백. 상세: `docs/06_UNI_RAG_챗봇_연동.md` |
 | 지도 | **VWorld 2D 지도**(국토교통부 공간정보 오픈플랫폼) WMTS 타일 + Leaflet 렌더링. 배경: Base(라이트)/midnight(다크), 필요 시 Satellite·Hybrid. 지오코더·2D데이터 API 병용 — **발급·사용 API 도출: `docs/05_VWorld_API_활용계획.md`** | 지도 통합 뷰어(L1~L4 공간표현). 국내 공공 서비스 표준 배경지도 — 시범서비스 지도는 VWorld 2D 기반으로 확정 |
 | 프론트엔드 | React 18 + Vite | UNE DS가 React JSX 컴포넌트로 제공됨 |
 | 디자인 | UNE Design System (styles.css 토큰 509종·컴포넌트·아이콘 250종) + SpoqaHanSansNeo(로컬 폰트 자체 호스팅) | 지침 2·3 |
@@ -51,8 +52,8 @@ disaster/
 ├── apps/
 │   ├── api/                  # FastAPI 백엔드
 │   │   ├── main.py           # 앱 엔트리·라우터 등록
-│   │   ├── routers/          # situation, search, ask, criteria, districts, rivers
-│   │   ├── services/         # retrieval(BM25), llm(claude/mock), corpus 로더
+│   │   ├── routers/          # situation, search, ask, chat, criteria, districts, rivers
+│   │   ├── services/         # retrieval(BM25), llm(claude/mock), uni_rag(챗봇 어댑터), corpus 로더
 │   │   ├── schemas/          # pydantic 모델(재난메타 EVT/REC/ARU 반영)
 │   │   └── tests/
 │   └── web/                  # React + Vite 프론트엔드
@@ -144,16 +145,19 @@ T3Q RAG API 연계 구조(사업수행계획서 4.2(7))의 "질의 구조화 →
 | GET `/api/geo?admin=&layer=` | 지도 레이어(경계·지구 마커·하천 구간) | GeoJSON (L1~L3) |
 | POST `/api/search` | {event, query, top_k} → 메타 필터+BM25 검색 | results[]: {passage, score, similarity_factors, source} |
 | POST `/api/ask` | {event, query} → 검색 후 근거 기반 응답 생성 | rag_answer_id, answer, top_k_results[](유사도 점수 포함), citations[], structured_refs(지구·하천·기준), geo_refs(GeoJSON) |
+| POST `/api/chat` | {query, history[], event?} → **UNI RAG main chat API 서버사이드 프록시**(SSE 중계) | SSE 스트림(또는 mock JSON). 자격증명·JWT는 백엔드 전용 — 프론트 미노출 |
 
 - `citations[]` = {passage_id, doc_title, chapter, page_start, page_end, quote} — 근거 표기 필수(F6). 응답마다 `rag_answer_id` 발급(추적성).
 - `similarity_factors` = 유형·시간·공간·피해 요인별 기여(Event Match Score 축약판) — ⑤정합성 패널의 요인 기여도 표출용.
 - LLM 프롬프트 원칙: 검색 청크 밖 정보로 답하지 않음(근거 없는 답변 금지) · 수치는 출처 페이지와 함께 제시 · 판단기준 언급 시 criteria.json 값 사용.
 - mock 모드: `ANTHROPIC_API_KEY` 미설정 시 검색 상위 청크 요약+citations로 구성된 결정적 응답 반환(데모·테스트 재현성).
-- T3Q 연계 시: services/llm·retrieval 어댑터만 T3Q RAG API/AI Agent(MCP) 호출로 교체 — 라우터·프론트 계약 불변.
+- 챗봇(`/api/chat`): UNI RAG `POST /chat/`(main chat API) 프록시 — `services/uni_rag.py` 어댑터가 `POST /auth/login`(UNE 계정) JWT 캐시·401 재로그인·SSE 중계 담당. `UNI_RAG_ACCOUNT` 미설정 또는 호출 실패 시 결정적 mock 폴백(응답에 mode 필드로 uni_rag/mock 구분). 상세: `docs/06_UNI_RAG_챗봇_연동.md`
+- 역할 분담: 근거 기반 응답(citations 필수)= `/api/ask`(로컬 BM25+Claude/mock), 자유 대화 챗봇= `/api/chat`(UNI RAG). UNI RAG에는 재난 코퍼스가 없으므로 출처 표기 체계는 로컬 엔진이 담당.
+- T3Q 연계 시: services/llm·retrieval·uni_rag 어댑터만 T3Q RAG API/AI Agent(MCP) 호출로 교체 — 라우터·프론트 계약 불변.
 
 ## 6. 화면 설계 요약 (상세: docs/03_화면설계.md)
 
-사업수행계획서 시범서비스 모듈 5종을 3열 레이아웃에 배치 (UNE DS · 라이트 기본, 다크 지원):
+사업수행계획서 시범서비스 모듈 5종 + ⑥대화형 챗봇(UNI RAG)을 3열 레이아웃에 배치 (UNE DS · 라이트 기본, 다크 지원). 중앙 하단 "질의 입력 + 근거 기반 응답" 영역은 근거응답(ask)과 챗봇 대화(chat)를 탭 또는 모드 전환으로 겸용한다:
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
