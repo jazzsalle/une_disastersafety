@@ -9,7 +9,8 @@
 ## Done this session
 - 지침 확인.txt / init-harness-prompt.md 검토
 - 원시자료 분석: 재난메타_정의서_v0.6.xlsx(6패싯·L0~L3·사건중심 EVT/REC/ARU), 재난판단기준_5종_v0.6.xlsx(태풍/풍수해/호우/홍수/산사태 판단조건·등급), UNE Design System 구조, 구미/의왕 자연재해저감종합계획 PDF, 요천/구미천 하천기본계획 PDF
-- 기획·설계 문서 작성 (docs/, DESIGN.md)
+- **착수 사업수행계획서 v0.9(80p) 분석 → docs/00_사업수행계획서_분석.md 작성, 기획·설계 전면 보완**: 재난유형 5종을 사업 기준(호우/홍수/수해·침수/태풍/산사태)으로 조정, 시범서비스 모듈 5종(입력 패널·지도 뷰어 L1~L4·Top-K 목록·상세조회·정합성) 반영, T3Q RAG API 연계 계약·식별자 체계(source_asset_id→…→rag_answer_id)·근거 제시율 100% 원칙 채택
+- 기획·설계 문서 작성 (docs/00~03, DESIGN.md — v0.2)
 - 하네스 구성 (.claude/agents, .claude/skills, evaluation_criteria.md, CLAUDE.md)
 
 ## In progress
