@@ -6,9 +6,8 @@
 - **개발키 발급 완료** — 로컬 `.env`에 기입됨(`VITE_VWORLD_API_KEY`·`VWORLD_API_KEY`, git 미포함). 다른 작업 환경에서는 `.env.example` 복사 후 동일 키 기입 필요
 - **API 신청 완료**: 모바일 API(2D/3D)·3D 데스크톱 API를 **제외한 전 API** 신청 — 1차 필수 3종(WMTS/TMS·지오코더·2D데이터)과 선택·고도화 API(이미지·WMS/WFS·범례·검색·3D 지도·2D 지도 JS 등) 모두 사용 가능 상태
 - 미신청: 2D/3D 모바일 API, 3D 데스크톱 API (웹 기반 시범서비스 범위 외 — 필요 시 추가 신청)
-- 등록 도메인 현황: **`www.unes.co.kr`(회사 웹) 등록됨 · `localhost` 미등록** — 개발 서버(localhost:5173)에서의 타일·API 호출은 현재 불가
-- **조치 필요(Phase 3 시작 전)**: 인증키의 서비스 URL에 `localhost` 추가, 또는 개발용 `localhost` 키 별도 발급(권장 — 기존 키는 시연/운영용 유지). ※ 등록 기준은 "브라우저에 뜨는 서비스 주소"이므로 집/회사 PC 구분 없이 `localhost` 하나로 개발 커버됨 — PC 이동 시 변경 불필요
-- 시연/운영: `www.unes.co.kr`(또는 확정 시연 도메인)에 배포하는 시점에 해당 도메인 키 사용
+- 등록 도메인 현황: **`localhost` 단독 등록(2026-07-23, www.unes.co.kr 삭제)** — 집/회사 PC 공통으로 개발 서버(localhost) 타일·API 호출 가능. ※ 등록 기준은 "브라우저에 뜨는 서비스 주소"이므로 PC 이동 시 변경 불필요
+- 시연/운영 도메인: **현재 별도 발급·등록 계획 없음** (개발·로컬 데모는 localhost로 충분). 향후 외부 도메인 배포가 결정되는 경우에만 해당 도메인 추가 등록
 - 근거: 시범서비스 설계안(DESIGN.md·docs/03 화면설계 — 지도 통합 뷰어 F7, L1~L4 공간표현 전략) ↔ VWorld 오픈 API 레퍼런스(https://www.vworld.kr/dev/v4apiRefer.do)
 - VWorld 제공 API 전체: 3D 지도, 2D 지도, 배경지도, WMS/WFS, WMTS/TMS, 2D데이터, 지오코더, 검색, 이미지(StaticMap), 범례 등 — 모두 **동일 인증키**(www.vworld.kr 인증키 발급, 사용 도메인 등록) 사용
 

@@ -10,8 +10,8 @@
 
 ```
 [원시자료 PDF/XLSX]                       [사용자 브라우저]
-  저감종합계획(구미·의왕)                     React + UNE Design System
-  하천기본계획(요천·구미천)                    ①상황입력 ②지도뷰어 ③Top-K목록
+  저감종합계획(구미·의왕·남원)                 React + UNE Design System
+  하천기본계획(요천·구미천·안양천)              ①상황입력 ②지도뷰어 ③Top-K목록
   재난메타·판단기준 v0.6                       ④상세조회 ⑤정합성(Citation)
         │                                            │ HTTP(JSON)
         ▼  (오프라인 배치)                            ▼
@@ -37,7 +37,7 @@
 | 계층 | 선택 | 근거 |
 |---|---|---|
 | 데이터 파이프라인 | Python 3.11, PyMuPDF(텍스트 — poppler 계열은 한글 유실 확인됨) + pdfplumber(표), openpyxl | 로컬 배치 처리, 표 추출 필요 |
-| 검색 | rank-bm25 (한국어 형태 정규화: kiwipiepy 선택 적용) | POC 규모(문서 4종)에 벡터DB 불요, 재현성. 본사업 스택(Milvus/OpenSearch/Neo4j/PostGIS)은 T3Q 연계 시 교체 |
+| 검색 | rank-bm25 (한국어 형태 정규화: kiwipiepy 선택 적용) | POC 규모(문서 6종)에 벡터DB 불요, 재현성. 본사업 스택(Milvus/OpenSearch/Neo4j/PostGIS)은 T3Q 연계 시 교체 |
 | 백엔드 | FastAPI + uvicorn | 경량 API, pydantic 스키마로 메타 정의 반영. T3Q RAG API 계약의 mock 서버 겸용 |
 | LLM | Claude API `claude-sonnet-5` (환경변수 `ANTHROPIC_API_KEY`) | RAG 응답 생성·인용. 키 없으면 결정적 mock 폴백 (본사업은 Llama3 — 어댑터로 분리) |
 | 지도 | **VWorld 2D 지도**(국토교통부 공간정보 오픈플랫폼) WMTS 타일 + Leaflet 렌더링. 배경: Base(라이트)/midnight(다크), 필요 시 Satellite·Hybrid. 지오코더·2D데이터 API 병용 — **발급·사용 API 도출: `docs/05_VWorld_API_활용계획.md`** | 지도 통합 뷰어(L1~L4 공간표현). 국내 공공 서비스 표준 배경지도 — 시범서비스 지도는 VWorld 2D 기반으로 확정 |
@@ -108,7 +108,7 @@ disaster/
 
 ### 4.2 정형 데이터 (DAR-008 정형화 항목 정합)
 - `districts.json` — 위험지구: 지구명·지자체·재해유형(8종)·위험요인·**위험조건 임계값 구조체(값·단위·비교연산·대상 — 예: 제방여유고 -0.83m)**·등급·저감대책·**사업상태(구축완료/구축중/구축필요)**·사업비·연차별 계획·투자우선순위·시행주체·좌표(가능 시)·근거(문서·페이지·표)
-- `rivers.json` — 하천: 하천명·등급(국가/지방)·지자체·유역면적·연장·시점/종점·지점(측점 No.)별 계획홍수량(m³/s)·계획홍수위·빈도·홍수특보 기준유량(50%/70% 산출값)·근거 페이지
+- `rivers.json` — 하천: 하천명·등급(국가/지방)·지자체·유역면적·연장·시점/종점·지점(측점 No.)별 계획홍수량(m³/s)·계획홍수위·빈도·홍수특보 기준유량(50%/70% 산출값)·**plan_version(기수립/변경 고시 연도 — 안양천 2015/2020 이중 수치 구분)**·근거 페이지
 - `criteria.json` — 판단기준_5종 v0.6 구조화: 유형(T코드+Event 코드)별 판단조건(Q1)·등급 세분화(Q2)·근거 출처(S#·URL)
 - `geo.json` — 지도 표출용: 지자체 경계(L3)·위험지구 대표점(L1)·하천 구간(L2) GeoJSON. 좌표 미확보 항목은 L4(목록 폴백) 처리
 
