@@ -6,7 +6,7 @@
 - **개발키 발급 완료** — 로컬 `.env`에 기입됨(`VITE_VWORLD_API_KEY`·`VWORLD_API_KEY`, git 미포함). 다른 작업 환경에서는 `.env.example` 복사 후 동일 키 기입 필요
 - **API 신청 완료**: 모바일 API(2D/3D)·3D 데스크톱 API를 **제외한 전 API** 신청 — 1차 필수 3종(WMTS/TMS·지오코더·2D데이터)과 선택·고도화 API(이미지·WMS/WFS·범례·검색·3D 지도·2D 지도 JS 등) 모두 사용 가능 상태
 - 미신청: 2D/3D 모바일 API, 3D 데스크톱 API (웹 기반 시범서비스 범위 외 — 필요 시 추가 신청)
-- 남은 확인: 발급 키의 등록 도메인에 `localhost`(개발 포트 포함) 포함 여부, 데모 시연 도메인 확정 시 추가 등록
+- **등록 도메인: `localhost` 추가 완료** — 개발 환경 타일·API 호출 가능 상태. 남은 확인: 데모 시연/운영 도메인 확정 시 추가 등록
 - 근거: 시범서비스 설계안(DESIGN.md·docs/03 화면설계 — 지도 통합 뷰어 F7, L1~L4 공간표현 전략) ↔ VWorld 오픈 API 레퍼런스(https://www.vworld.kr/dev/v4apiRefer.do)
 - VWorld 제공 API 전체: 3D 지도, 2D 지도, 배경지도, WMS/WFS, WMTS/TMS, 2D데이터, 지오코더, 검색, 이미지(StaticMap), 범례 등 — 모두 **동일 인증키**(www.vworld.kr 인증키 발급, 사용 도메인 등록) 사용
 
