@@ -40,7 +40,7 @@
 | 검색 | rank-bm25 (한국어 형태 정규화: kiwipiepy 선택 적용) | POC 규모(문서 4종)에 벡터DB 불요, 재현성. 본사업 스택(Milvus/OpenSearch/Neo4j/PostGIS)은 T3Q 연계 시 교체 |
 | 백엔드 | FastAPI + uvicorn | 경량 API, pydantic 스키마로 메타 정의 반영. T3Q RAG API 계약의 mock 서버 겸용 |
 | LLM | Claude API `claude-sonnet-5` (환경변수 `ANTHROPIC_API_KEY`) | RAG 응답 생성·인용. 키 없으면 결정적 mock 폴백 (본사업은 Llama3 — 어댑터로 분리) |
-| 지도 | **VWorld 2D 지도**(국토교통부 공간정보 오픈플랫폼) XYZ/WMTS 타일 + Leaflet 렌더링. 배경: Base(라이트)/midnight(다크), 필요 시 Satellite·Hybrid. API 키 `VWORLD_API_KEY`(api.vworld.kr 발급, 도메인 등록) | 지도 통합 뷰어(L1~L4 공간표현). 국내 공공 서비스 표준 배경지도 — 시범서비스 지도는 VWorld 2D 기반으로 확정 |
+| 지도 | **VWorld 2D 지도**(국토교통부 공간정보 오픈플랫폼) WMTS 타일 + Leaflet 렌더링. 배경: Base(라이트)/midnight(다크), 필요 시 Satellite·Hybrid. 지오코더·2D데이터 API 병용 — **발급·사용 API 도출: `docs/05_VWorld_API_활용계획.md`** | 지도 통합 뷰어(L1~L4 공간표현). 국내 공공 서비스 표준 배경지도 — 시범서비스 지도는 VWorld 2D 기반으로 확정 |
 | 프론트엔드 | React 18 + Vite | UNE DS가 React JSX 컴포넌트로 제공됨 |
 | 디자인 | UNE Design System (styles.css 토큰 509종·컴포넌트·아이콘 250종) + SpoqaHanSansNeo(로컬 폰트 자체 호스팅) | 지침 2·3 |
 
