@@ -1,0 +1,20 @@
+<!-- @dsCard group="Colors" viewport="700x220" name="Neutrals — Grayscale" subtitle="grayscale 20→900 + dark-blue neutrals" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:16px}
+.row{display:grid;grid-template-columns:repeat(15,1fr);gap:4px;margin-bottom:12px}
+.sw{height:52px;border-radius:4px;border:1px solid rgba(0,0,0,.06)}
+.lab{font-size:9px;color:#686d78;text-align:center;margin-top:3px}
+.cell{display:flex;flex-direction:column}
+.t{font-size:11px;color:#444a57;margin:0 0 6px;font-weight:700}
+</style></head><body>
+<p class="t">grayscale</p><div class="row" id="g"></div>
+<p class="t">dark-blue (dark-mode neutrals)</p><div class="row" id="d"></div>
+<script>
+const steps=[20,25,50,75,100,150,200,300,400,500,600,700,800,900];
+const cell=(p,s)=>`<div class="cell"><div class="sw" style="background:var(--color-${p}-${s})"></div><div class="lab">${s}</div></div>`;
+document.getElementById('g').innerHTML = [...steps.slice(0,10),850,...steps.slice(10)].sort((a,b)=>a-b).map(s=>cell('grayscale',s)).join('');
+document.getElementById('d').innerHTML = steps.map(s=>cell('dark-blue',s)).join('');
+</script>
+</body></html>

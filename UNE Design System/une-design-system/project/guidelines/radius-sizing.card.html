@@ -1,0 +1,23 @@
+<!-- @dsCard group="Spacing" viewport="700x170" name="Radius & control sizes" subtitle="radius xs→max · control heights 20→56" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:16px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;align-items:flex-end}
+.r{width:64px;height:48px;background:var(--color-light-blue-50,#f0f4ff);border:1.5px solid var(--color-light-blue-500,#3c69fc);display:flex;align-items:center;justify-content:center;font-size:10px;color:#15255c}
+.c{background:var(--color-grayscale-100,#ebecf0);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:9.5px;color:#444a57;padding:0 8px}
+</style></head><body>
+<div class="row">
+  <div class="r" style="border-radius:2px">xs · 2</div>
+  <div class="r" style="border-radius:4px">sm · 4</div>
+  <div class="r" style="border-radius:8px">md · 8</div>
+  <div class="r" style="border-radius:12px">lg · 12</div>
+  <div class="r" style="border-radius:16px">xl · 16</div>
+  <div class="r" style="border-radius:1000px">max</div>
+</div>
+<div class="row" id="controls"></div>
+<script>
+const ctl=[['4xs',20],['3xs',24],['2xs',28],['xs',32],['sm',36],['md',40],['lg',44],['xl',48],['2xl',52],['3xl',56]];
+document.getElementById('controls').innerHTML = ctl.map(([n,v])=>`<div class="c" style="height:${v}px">${n} ${v}</div>`).join('');
+</script>
+</body></html>

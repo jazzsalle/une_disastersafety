@@ -1,0 +1,23 @@
+<!-- @dsCard group="Colors" viewport="700x190" name="Primary — Light Blue" subtitle="Brand primary scale (light-blue 20→900)" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:16px}
+.row{display:grid;grid-template-columns:repeat(14,1fr);gap:4px}
+.sw{height:64px;border-radius:4px;border:1px solid rgba(0,0,0,.06)}
+.lab{font-size:10px;color:#686d78;text-align:center;margin-top:4px}
+.cell{display:flex;flex-direction:column}
+.hero{margin-top:10px;display:flex;gap:8px;align-items:center}
+.chip{height:40px;flex:1;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px}
+</style></head><body>
+<div class="row" id="scale"></div>
+<div class="hero">
+  <div class="chip" style="background:var(--color-light-blue-500);color:#fff">light-blue-500 · #3C69FC</div>
+  <div class="chip" style="background:var(--color-dark-blue-500);color:#fff">dark-blue-500</div>
+  <div class="chip" style="background:var(--color-surface-brand);color:var(--color-text-on-brand)">surface/brand</div>
+</div>
+<script>
+const steps=[20,25,50,75,100,150,200,300,400,500,600,700,800,900];
+document.getElementById('scale').innerHTML = steps.map(s=>`<div class="cell"><div class="sw" style="background:var(--color-light-blue-${s})"></div><div class="lab">${s}</div></div>`).join('');
+</script>
+</body></html>

@@ -1,0 +1,16 @@
+<!-- @dsCard group="Brand" viewport="700x400" name="Icons" subtitle="250-glyph system icon set — currentColor, 24px grid" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:14px}
+#grid{display:grid;grid-template-columns:repeat(18,1fr);gap:6px}
+.i{display:flex;align-items:center;justify-content:center;color:#686d78;padding:4px;border-radius:4px}
+.i:hover{background:var(--color-light-blue-25,#f0f4ff);color:var(--color-light-blue-500,#3c69fc)}
+</style></head><body>
+<div id="grid"></div>
+<script type="module">
+import icons from './icon-data.js';
+const grid=document.getElementById('grid');
+grid.innerHTML = Object.entries(icons).map(([n,d])=>`<div class="i" title="${n}"><svg width="22" height="22" viewBox="${d.viewBox}">${d.body}</svg></div>`).join('');
+</script>
+</body></html>

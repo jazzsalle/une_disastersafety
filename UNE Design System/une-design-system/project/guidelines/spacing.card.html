@@ -1,0 +1,16 @@
+<!-- @dsCard group="Spacing" viewport="700x250" name="Spacing scale" subtitle="spacing 2→96 + semantic gap/padding steps" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:16px;font-size:11px;color:#444a57}
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:5px}
+.lab{width:120px;flex-shrink:0;color:#15255c;font-weight:700;font-size:10.5px}
+.b{height:12px;background:var(--color-light-blue-500,#3c69fc);border-radius:2px}
+.v{color:#a6a9af;font-size:10px}
+</style></head><body>
+<div id="rows"></div>
+<script>
+const sem=[['gap/2xs',4],['gap/xs',8],['gap/sm',12],['gap/md',16],['gap/lg',20],['gap/xl',24],['gap/2xl',32],['padding/h/md',16],['padding/h/xl',24],['padding/h/2xl',32]];
+document.getElementById('rows').innerHTML = sem.map(([n,v])=>`<div class="bar"><span class="lab">spacing/${n}</span><div class="b" style="width:${v*4}px"></div><span class="v">${v}px</span></div>`).join('');
+</script>
+</body></html>

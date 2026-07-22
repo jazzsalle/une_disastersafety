@@ -1,0 +1,28 @@
+# 원시데이터 (대용량 보고서·원본 자료 — 저장소에 올리지 않음)
+자연재해저감종합계획 및 하천기본계획/
+재난 메타 데이터 정의서_재난판단기준/
+
+# 글꼴 바이너리 (POC 앱에 필요한 사본은 app 쪽 public/fonts에 별도 배치)
+SpoqaHanSansNeo-Regular/
+
+# 빌드·의존성
+node_modules/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 환경·비밀
+.env
+.env.*
+!.env.example
+
+# 데이터 파이프라인 산출물(대용량)
+data/processed/
+data/index/
+
+# OS/편집기
+.DS_Store
+Thumbs.db

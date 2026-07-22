@@ -1,0 +1,19 @@
+<!-- @dsCard group="Colors" viewport="700x290" name="Semantic scales" subtitle="red · yellow · green · orange · teal · purple" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:16px}
+.row{display:grid;grid-template-columns:56px repeat(14,1fr);gap:4px;margin-bottom:6px;align-items:center}
+.sw{height:28px;border-radius:3px;border:1px solid rgba(0,0,0,.05)}
+.name{font-size:11px;color:#444a57;font-weight:700}
+.labels{display:grid;grid-template-columns:56px repeat(14,1fr);gap:4px;margin-bottom:4px}
+.labels span{font-size:9px;color:#a6a9af;text-align:center}
+</style></head><body>
+<div class="labels"><span></span><span>20</span><span>25</span><span>50</span><span>75</span><span>100</span><span>150</span><span>200</span><span>300</span><span>400</span><span>500</span><span>600</span><span>700</span><span>800</span><span>900</span></div>
+<div id="rows"></div>
+<script>
+const steps=[20,25,50,75,100,150,200,300,400,500,600,700,800,900];
+const fams=['red','yellow','green','orange','teal','purple'];
+document.getElementById('rows').innerHTML = fams.map(f=>`<div class="row"><span class="name">${f}</span>${steps.map(s=>`<div class="sw" style="background:var(--color-${f}-${s})"></div>`).join('')}</div>`).join('');
+</script>
+</body></html>

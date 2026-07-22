@@ -1,0 +1,15 @@
+<!-- @dsCard group="Brand" viewport="700x150" name="Product & file-format marks" subtitle="Logo/메인·관제·관리·빌더·sop + file-format glyphs" -->
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css">
+<style>
+body{margin:0;font-family:var(--font-ui);background:#fff;padding:18px}
+#grid{display:flex;gap:18px;flex-wrap:wrap}
+.i{display:flex;flex-direction:column;align-items:center;gap:6px;color:#686d78;font-size:9.5px}
+</style></head><body>
+<div id="grid"></div>
+<script type="module">
+import logos from './icon-data.js';
+const order=['메인','관제','관리','빌더','sop','파일포맷_pdf','파일포맷_docx','파일포맷_xlsx','파일포맷_pptx','파일포맷_hwpx','파일포맷_jpeg','파일포맷_png'];
+document.getElementById('grid').innerHTML = order.filter(n=>logos[n]).map(n=>`<div class="i"><svg width="36" height="36" viewBox="${logos[n].viewBox}">${logos[n].body}</svg><span>${n}</span></div>`).join('');
+</script>
+</body></html>
