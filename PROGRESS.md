@@ -24,14 +24,18 @@
   - UNE DS 사본(src/ds, CDN 제거·SpoqaHanSansNeo 로컬 폰트)·3열 레이아웃·다크 토글
   - 패널: ①상황입력(ChoiceChip 5종·동적 Segment·키워드 Chip·buildEvent) ②VWorld WMTS 지도(Base/midnight, L1~L3, 키 미설정 시 안내) ③Top-K 카드(지도 하이라이트 연동) ④상세조회(지구 Modal·하천 표·안양천 plan_version 배지) ⑤정합성(Citation·기여도 바·검증 토글) ⑥챗봇(SSE 스트리밍·mock 배지·history) + 판단기준 탭
   - `npm run build` 통과, 통합 검증서 결합 버그 5건 수정(Toast 배선·Badge 변형·passage 하이라이트·IME·card.html CDN 제거)
-- Phase 4 진행 (아래 In progress 참조)
+- **Phase 4 완료**: 통합·시나리오 검증
+  - `/api/ask·search·chat` 요청 단위 로그(disaster.api, 비밀값 미포함 — 체크리스트 ⑧), pytest 79건
+  - `scripts/verify_scenarios.py`: S1 호우/의왕 17건·S2 홍수/남원 18건·S3 산사태/구미 15건 어서션 전부 통과, 서비스 검증 체크리스트 8/8(①⑤는 코드 검증 대체)
+  - `docs/04_데모시나리오.md`(입력값·클릭 절차·예상 결과·체크리스트 표)·`README.md`(설치·실행·환경변수) 작성
 
 ## In progress
-- Phase 4 (통합·시나리오 검증) — 진행 중이면 이 항목이 최신이 아닐 수 있음. git log와 아래 기록 참조
+- (없음 — Phase 1~4 전체 완료)
 
 ## Next steps
-1. Phase 2 → 3 → 4 순차 진행 (각각 planner→generator→evaluator, PASS 시 커밋)
-2. **내일(회사 PC) 사용자 결정·보완 필요 사항 — 아래 "결정 필요" 섹션 처리**
+1. **내일(회사 PC) 사용자 결정·보완 — 아래 "결정 필요" 섹션 처리** (특히 push, UNI RAG 실 chat 재확인)
+2. 브라우저 실 데모 리허설: 백엔드+프론트 기동 후 docs/04 절차대로 화면 확인(VWorld 키·다크 모드 포함)
+3. 잔여 고도화(선택): UNI RAG 모델 가동 시 챗봇 실연동 확인, Claude API 키로 ask 실 LLM 경로 확인
 
 ## 결정 필요 (사용자 확인 대기 — 권장안으로 우선 구현함)
 1. ~~UNI RAG 계정~~ **(해소 — 취침 중 사용자 제공)**: 계정 .env 기입 완료, 로그인 성공 확인. 잔여: **chat 실호출은 UNI RAG 모델 서버(GPU) 가동 후 재확인 필요**(현재 500 → mock 폴백 동작). 이 계정이 개인 계정이므로 데모용 서비스 계정 전환 여부는 추후 판단

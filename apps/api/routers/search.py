@@ -5,11 +5,15 @@
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 from pydantic import BaseModel, Field, field_validator
 
 from schemas.common import Event, SearchResult
 from services import retrieval
+
+logger = logging.getLogger("disaster.api")
 
 router = APIRouter(tags=["search"])
 
@@ -46,5 +50,13 @@ def post_search(req: SearchRequest) -> SearchResponse:
         req.event.admin_code
         and results
         and all(r.passage.get("admin_code") != req.event.admin_code for r in results)
+    )
+    # 요청 단위 로그 — 서비스 검증 체크리스트 ⑧(비밀값 미포함)
+    logger.info(
+        "search results=%d filter_relaxed=%s admin_code=%s hazard_code=%s",
+        len(results),
+        relaxed,
+        req.event.admin_code,
+        req.event.hazard_code,
     )
     return SearchResponse(results=results, filter_relaxed=relaxed)

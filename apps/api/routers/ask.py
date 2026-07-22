@@ -10,6 +10,7 @@ citations(근거 표기 — 없으면 no_evidence=True로 명시)·structured_re
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -18,6 +19,8 @@ from pydantic import BaseModel, Field, field_validator
 
 from schemas.common import Citation, Event, SearchResult
 from services import corpus, llm, retrieval
+
+logger = logging.getLogger("disaster.api")
 
 router = APIRouter(tags=["ask"])
 
@@ -107,7 +110,7 @@ def _geo_refs(event: Event) -> dict:
 def post_ask(req: AskRequest) -> AskResponse:
     results = retrieval.search(req.event, req.query, req.top_k)
     generated = llm.generate_answer(req.event, req.query, results)
-    return AskResponse(
+    response = AskResponse(
         rag_answer_id=_new_rag_answer_id(),
         answer=generated["answer"],
         mode=generated["mode"],
@@ -117,3 +120,14 @@ def post_ask(req: AskRequest) -> AskResponse:
         structured_refs=_structured_refs(req.event),
         geo_refs=_geo_refs(req.event),
     )
+    # 요청 단위 로그 — 서비스 검증 체크리스트 ⑧(비밀값 미포함)
+    logger.info(
+        "ask rag_answer_id=%s admin_code=%s hazard_code=%s mode=%s citations=%d no_evidence=%s",
+        response.rag_answer_id,
+        req.event.admin_code,
+        req.event.hazard_code,
+        response.mode,
+        len(response.citations),
+        response.no_evidence,
+    )
+    return response

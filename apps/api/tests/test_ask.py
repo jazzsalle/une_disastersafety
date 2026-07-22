@@ -181,3 +181,58 @@ def test_adapter_signature_fixed():
 def test_empty_query_422(client):
     assert client.post("/api/ask", json={"event": {}, "query": ""}).status_code == 422
     assert client.post("/api/ask", json={"event": {}, "query": "  "}).status_code == 422
+
+
+# ── 7. 요청 단위 로그 (서비스 검증 체크리스트 ⑧) ──
+def test_request_log_contains_rag_answer_id(client, caplog):
+    """/api/ask 처리 시 disaster.api 로거에 rag_answer_id 로그 라인이 남아야 한다."""
+    import logging
+
+    with caplog.at_level(logging.INFO, logger="disaster.api"):
+        body = _post(client, "호우 침수 대응", "T10107", "41430").json()
+
+    log_lines = [
+        r.getMessage()
+        for r in caplog.records
+        if r.name == "disaster.api" and r.getMessage().startswith("ask ")
+    ]
+    assert log_lines, "disaster.api 로거의 ask 요청 로그가 없음"
+    line = log_lines[-1]
+    assert f"rag_answer_id={body['rag_answer_id']}" in line
+    assert "admin_code=41430" in line
+    assert "hazard_code=T10107" in line
+    assert "mode=mock" in line
+    assert "citations=" in line and "no_evidence=False" in line
+
+
+def test_request_log_excludes_secrets(client, caplog, monkeypatch):
+    """ask·search·chat 로그에 자격증명·API 키 등 비밀값이 포함되지 않아야 한다."""
+    import logging
+
+    secrets = {
+        "UNI_RAG_PASSWORD": "SECRET-UNI-PW-XYZ",
+        "ANTHROPIC_API_KEY": "sk-ant-SECRET-KEY-XYZ",
+    }
+    # UNI_RAG_ACCOUNT는 미설정 유지 → chat은 mock 폴백(실 로그인 호출 없음)
+    monkeypatch.delenv("UNI_RAG_ACCOUNT", raising=False)
+    monkeypatch.setenv("UNI_RAG_PASSWORD", secrets["UNI_RAG_PASSWORD"])
+    monkeypatch.setenv("ANTHROPIC_API_KEY", secrets["ANTHROPIC_API_KEY"])
+    monkeypatch.setattr(llm, "_call_claude", lambda *a, **k: "가짜 Claude 응답")
+
+    with caplog.at_level(logging.INFO, logger="disaster.api"):
+        assert _post(client, "호우 침수 대응", "T10107", "41430").status_code == 200
+        assert (
+            client.post(
+                "/api/search",
+                json={"event": {"admin_code": "41430"}, "query": "침수 피해"},
+            ).status_code
+            == 200
+        )
+        assert client.post("/api/chat", json={"query": "침수 대응 문의"}).status_code == 200
+
+    api_records = [r for r in caplog.records if r.name.startswith("disaster.api")]
+    assert any(r.getMessage().startswith("ask ") for r in api_records)
+    assert any(r.getMessage().startswith("search ") for r in api_records)
+    assert any(r.getMessage().startswith("chat ") for r in api_records)
+    for value in secrets.values():
+        assert value not in caplog.text, f"로그에 비밀값 노출: {value[:12]}…"

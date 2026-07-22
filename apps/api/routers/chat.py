@@ -8,11 +8,15 @@
 """
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from services import uni_rag
+
+logger = logging.getLogger("disaster.api")
 
 router = APIRouter(tags=["chat"])
 
@@ -40,6 +44,10 @@ def post_chat(body: ChatBody):
         history=[m.model_dump() for m in body.history],
         event=body.event,
     )
+    mode = "uni_rag" if isinstance(result, StreamingResponse) else "mock"
+    # 요청 단위 로그 — 서비스 검증 체크리스트 ⑧. 질의 원문 대신 길이만 기록
+    # (개인정보 유입 가능성 차단), 자격증명·JWT 등 비밀값 미포함.
+    logger.info("chat mode=%s query_len=%d history_len=%d", mode, len(body.query), len(body.history))
     if isinstance(result, StreamingResponse):
         return result
     return JSONResponse(content=result, headers={"X-Chat-Mode": "mock"})
