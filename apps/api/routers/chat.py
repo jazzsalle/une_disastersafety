@@ -35,6 +35,10 @@ class ChatBody(BaseModel):
     query: str = Field(min_length=1, description="사용자 질의(필수)")
     history: list[ChatMessage] = Field(default_factory=list, description="대화 이력")
     event: dict | None = Field(default=None, description="상황(사건) 컨텍스트 — 선택")
+    poi: dict | None = Field(
+        default=None,
+        description='지도 선택 POI — {"type": "district"|"river", "id": 지구코드|하천ID}',
+    )
 
 
 @router.post("/chat")
@@ -49,6 +53,7 @@ def post_chat(
             history=[m.model_dump() for m in body.history],
             event=body.event,
             token=uni_rag_token,
+            poi=body.poi,
         )
     except uni_rag.UniRagAuthError:
         # 토큰 만료·무효 — 프론트가 재로그인 화면으로 유도

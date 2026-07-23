@@ -21,7 +21,8 @@ from collections.abc import Iterator
 import httpx
 from fastapi.responses import StreamingResponse
 
-from services import corpus
+from schemas.common import Event
+from services import corpus, retrieval
 
 logger = logging.getLogger("disaster.api.uni_rag")
 
@@ -223,9 +224,13 @@ def chat(
     history: list[dict] | None = None,
     event: dict | None = None,
     token: str | None = None,
+    poi: dict | None = None,
 ) -> StreamingResponse | dict:
     """/api/chat 처리 — UNI RAG SSE 중계 또는 결정적 mock 응답(dict).
 
+    - poi(지도 선택 지구·하천) 있으면 속성정보를 질의에 첨부(_query_with_poi)
+    - 실연동 경로는 로컬 BM25 발췌를 컨텍스트로 첨부하고(_query_with_excerpts),
+      스트림 첫 이벤트로 {"__local_excerpts__": [...]}를 내보내 프론트가 출처 표기
     - token(개인 로그인 쿠키) 있음 → 그 토큰으로 상류 호출.
       401은 UniRagAuthError로 전파(라우터가 401 반환 — 프론트 재로그인 유도)
     - token 없음: UNI_RAG_ACCOUNT 환경변수 있으면 서버 계정 경로(로컬 개발용),
@@ -234,26 +239,31 @@ def chat(
     - 성공 → text/event-stream 중계(StreamingResponse, X-Chat-Mode: uni_rag)
     """
     history = history or []
+    query = _query_with_poi(query, poi)
     if token:
+        excerpts = _local_excerpts(query, event)
+        upstream_query = _query_with_excerpts(query, excerpts)
         try:
-            upstream = get_client().chat_stream_with_token(token, query, history, event)
+            upstream = get_client().chat_stream_with_token(token, upstream_query, history, event)
             prelude, tail = _peek_prelude(upstream)
         except UniRagAuthError:
             raise  # 라우터에서 401 처리
         except Exception as exc:  # noqa: BLE001 — 연동 실패는 조용히 mock 폴백
             logger.warning("UNI RAG 연동 실패 — mock 폴백 (%s: %s)", type(exc).__name__, exc)
             return build_mock_answer(query, history, event)
-        return _stream_or_mock(upstream, prelude, tail, query, history, event)
+        return _stream_or_mock(upstream, prelude, tail, query, history, event, excerpts)
     if not os.environ.get("UNI_RAG_ACCOUNT"):
         return build_mock_answer(query, history, event)
+    excerpts = _local_excerpts(query, event)
+    upstream_query = _query_with_excerpts(query, excerpts)
     try:
-        upstream = get_client().chat_stream(query, history, event)
+        upstream = get_client().chat_stream(upstream_query, history, event)
         prelude, tail = _peek_prelude(upstream)
     except Exception as exc:  # noqa: BLE001 — 연동 실패는 조용히 mock 폴백
         # 주의: 자격증명·토큰이 로그에 남지 않도록 예외 타입·요약만 기록
         logger.warning("UNI RAG 연동 실패 — mock 폴백 (%s: %s)", type(exc).__name__, exc)
         return build_mock_answer(query, history, event)
-    return _stream_or_mock(upstream, prelude, tail, query, history, event)
+    return _stream_or_mock(upstream, prelude, tail, query, history, event, excerpts)
 
 
 def _stream_or_mock(
@@ -263,16 +273,25 @@ def _stream_or_mock(
     query: str,
     history: list[dict],
     event: dict | None,
+    excerpts: list[dict] | None = None,
 ) -> StreamingResponse | dict:
-    """첫 이벤트가 오류 페이로드면 mock 폴백, 아니면 SSE 중계 응답 구성."""
+    """첫 이벤트가 오류 페이로드면 mock 폴백, 아니면 SSE 중계 응답 구성.
+
+    중계 시 첫 이벤트로 로컬 발췌({"__local_excerpts__": [...]})를 내보낸다.
+    """
     error = _sse_first_error(prelude)
     if error is not None:
         # HTTP 200이어도 첫 이벤트가 오류 페이로드면 실질 실패(모델 서버 미가동 등)
         upstream.close()
         logger.warning("UNI RAG 스트림 오류 이벤트 — mock 폴백 (%s)", error)
         return build_mock_answer(query, history, event)
+    header = (
+        b"data: "
+        + json.dumps({"__local_excerpts__": excerpts or []}, ensure_ascii=False).encode("utf-8")
+        + b"\n\n"
+    )
     return StreamingResponse(
-        _relay(upstream, prelude, tail),
+        _relay(upstream, header + prelude, tail),
         media_type="text/event-stream",
         headers={"X-Chat-Mode": "uni_rag", "Cache-Control": "no-cache"},
     )
@@ -339,6 +358,90 @@ def _query_with_event(query: str, event: dict | None) -> str:
     if not parts:
         return query
     return f"{query}\n\n[상황 정보] " + " · ".join(parts)
+
+
+def _query_with_poi(query: str, poi: dict | None) -> str:
+    """선택 POI(위험지구·하천) 속성정보를 질의 뒤에 결정적 형식으로 덧붙인다.
+
+    poi = {"type": "district"|"river", "id": district_code|river_id} — 프론트 지도
+    클릭 선택. 레코드 미조회·형식 오류 시 원 질의 그대로(방어적).
+    """
+    if not isinstance(poi, dict) or not poi.get("id"):
+        return query
+    poi_id = str(poi["id"])
+    if poi.get("type") == "river":
+        rec = next(
+            (r for r in corpus.get_rivers().get("rivers", []) if r.get("river_id") == poi_id),
+            None,
+        )
+        if not rec:
+            return query
+        parts = [f"하천명: {rec.get('name')}({poi_id})"]
+        for label, key in (("등급", "grade"), ("관할", "admin_name"), ("계획빈도", "design_frequency_yr")):
+            if rec.get(key):
+                parts.append(f"{label}: {rec[key]}")
+        return f"{query}\n\n[선택 하천 정보] " + " · ".join(parts)
+    rec = next(
+        (d for d in corpus.get_districts().get("districts", []) if d.get("district_code") == poi_id),
+        None,
+    )
+    if not rec:
+        return query
+    parts = [f"지구명: {rec.get('district_name')}({poi_id})"]
+    kind = rec.get("disaster_type")
+    if rec.get("disaster_subtype"):
+        kind = f"{kind}({rec['disaster_subtype']})" if kind else rec["disaster_subtype"]
+    if kind:
+        parts.append(f"재해유형: {kind}")
+    for label, key in (("관할", "admin_name"), ("위치", "location"), ("관련 하천", "river_name")):
+        if rec.get(key):
+            parts.append(f"{label}: {rec[key]}")
+    factors = [f for f in (rec.get("risk_factors") or []) if isinstance(f, str)][:2]
+    if factors:
+        parts.append("위험요인: " + " / ".join(factors))
+    return f"{query}\n\n[선택 위험지구 정보] " + " · ".join(parts)
+
+
+def _local_excerpts(query: str, event: dict | None) -> list[dict]:
+    """로컬 BM25 상위 3건 발췌 — UNI RAG 컨텍스트 주입·프론트 출처 표기 공용.
+
+    검색 실패는 챗봇 동작을 막지 않는다(빈 목록).
+    """
+    try:
+        fields = {k: v for k, v in (event or {}).items() if k in Event.model_fields}
+        results = retrieval.search(Event(**fields), query, top_k=3)
+    except Exception as exc:  # noqa: BLE001 — 근거 주입은 보조 기능
+        logger.warning("로컬 근거 검색 실패 — 발췌 없이 진행 (%s)", type(exc).__name__)
+        return []
+    excerpts: list[dict] = []
+    for r in results[:3]:
+        p = r.passage if hasattr(r, "passage") else (r.get("passage") or {})
+        excerpts.append(
+            {
+                "passage_id": p.get("passage_id"),
+                "doc_title": p.get("doc_title"),
+                "chapter": p.get("chapter"),
+                "page_start": p.get("page_start"),
+                "page_end": p.get("page_end"),
+                "quote": (p.get("content") or "")[:300],
+            }
+        )
+    return excerpts
+
+
+def _query_with_excerpts(query: str, excerpts: list[dict]) -> str:
+    """로컬 코퍼스 발췌를 질의 뒤에 참고자료로 덧붙인다(에이전트 근거 유도)."""
+    if not excerpts:
+        return query
+    lines = ["[참고 문서 발췌 — 아래 내용을 근거로 답하고, 근거가 없으면 모른다고 답할 것]"]
+    for i, ex in enumerate(excerpts, 1):
+        loc_bits = [str(ex.get("doc_title") or "")]
+        if ex.get("chapter"):
+            loc_bits.append(str(ex["chapter"]))
+        if ex.get("page_start"):
+            loc_bits.append(f"p.{ex['page_start']}")
+        lines.append(f"{i}. ({' '.join(loc_bits).strip()}) {ex.get('quote') or ''}")
+    return query + "\n\n" + "\n".join(lines)
 
 
 def _match_terms(query: str, event: dict | None) -> list[str]:

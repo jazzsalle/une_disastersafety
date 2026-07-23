@@ -192,6 +192,129 @@ def test_chat_5xx_falls_back_to_mock(client, monkeypatch):
     _assert_no_secret(res, (ACCOUNT, PASSWORD, "tok-a"))
 
 
+# ── 2-②. POI 컨텍스트·로컬 발췌 주입 ─────────────────────────────────
+FAKE_DISTRICTS = {
+    "districts": [
+        {
+            "district_code": "TW-Z-99",
+            "district_name": "오랑개천지구",
+            "disaster_type": "토사재해",
+            "disaster_subtype": "토석류위험지구",
+            "admin_name": "전북 남원시",
+            "location": "남원시 오랑길 1",
+            "river_name": "오랑개천",
+            "risk_factors": ["급경사지 토석류 발생 이력", "배수시설 용량 부족"],
+        }
+    ]
+}
+
+
+def test_poi_district_context_in_upstream_query(client, monkeypatch):
+    """지도에서 지구 POI 선택 후 질의하면 상류 query에 속성정보가 첨부된다."""
+    _set_credentials(monkeypatch)
+    monkeypatch.setattr(corpus, "get_districts", lambda: FAKE_DISTRICTS)
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/login":
+            return httpx.Response(200, json={"token": "tok-p"})
+        if request.url.path == "/chat/":
+            seen["query"] = json.loads(request.read())["query"]
+            return httpx.Response(
+                200, content=SSE_BODY, headers={"content-type": "text/event-stream"}
+            )
+        return httpx.Response(404)
+
+    _use_transport(monkeypatch, handler)
+    res = client.post(
+        "/api/chat",
+        json={
+            "query": "왜 토사재해구역으로 선정되었는지 알려줘",
+            "poi": {"type": "district", "id": "TW-Z-99"},
+        },
+    )
+    assert res.status_code == 200
+    # 사용자 질의 원문 + 지구 속성정보(지구명·재해유형·위치·위험요인)가 함께 전달
+    assert "왜 토사재해구역으로 선정되었는지 알려줘" in seen["query"]
+    assert "오랑개천지구" in seen["query"]
+    assert "토사재해" in seen["query"]
+    assert "남원시 오랑길 1" in seen["query"]
+    assert "급경사지 토석류 발생 이력" in seen["query"]
+
+
+def test_poi_unknown_id_leaves_query_unchanged(client, monkeypatch):
+    """미존재 POI id는 무시하고 원 질의 그대로 전달한다."""
+    _set_credentials(monkeypatch)
+    monkeypatch.setattr(corpus, "get_districts", lambda: FAKE_DISTRICTS)
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/login":
+            return httpx.Response(200, json={"token": "tok-p2"})
+        if request.url.path == "/chat/":
+            seen["query"] = json.loads(request.read())["query"]
+            return httpx.Response(
+                200, content=SSE_BODY, headers={"content-type": "text/event-stream"}
+            )
+        return httpx.Response(404)
+
+    _use_transport(monkeypatch, handler)
+    res = client.post(
+        "/api/chat",
+        json={"query": "질의", "poi": {"type": "district", "id": "NO-SUCH"}},
+    )
+    assert res.status_code == 200
+    assert "[선택 위험지구 정보]" not in seen["query"]
+
+
+def test_stream_prepends_local_excerpts(client, monkeypatch):
+    """실연동 스트림 첫 이벤트로 로컬 코퍼스 발췌(__local_excerpts__)가 온다."""
+    from types import SimpleNamespace
+
+    _set_credentials(monkeypatch)
+    monkeypatch.setattr(
+        uni_rag.retrieval,
+        "search",
+        lambda event, query, top_k=3: [
+            SimpleNamespace(
+                passage={
+                    "passage_id": "P-LOCAL-1",
+                    "doc_title": "의왕시 자연재해저감종합계획",
+                    "chapter": "제3장",
+                    "page_start": 12,
+                    "page_end": 13,
+                    "content": "오전동 침수 위험지구 근거 본문",
+                }
+            )
+        ],
+    )
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/login":
+            return httpx.Response(200, json={"token": "tok-x"})
+        if request.url.path == "/chat/":
+            seen["query"] = json.loads(request.read())["query"]
+            return httpx.Response(
+                200, content=SSE_BODY, headers={"content-type": "text/event-stream"}
+            )
+        return httpx.Response(404)
+
+    _use_transport(monkeypatch, handler)
+    res = client.post("/api/chat", json={"query": "오전동 침수 이력"})
+    assert res.status_code == 200
+    assert res.headers["x-chat-mode"] == "uni_rag"
+    # 첫 이벤트 = 로컬 발췌, 이후 상류 SSE 그대로
+    first_event = res.text.split("\n\n")[0]
+    assert first_event.startswith("data: ")
+    payload = json.loads(first_event[len("data: "):])
+    assert payload["__local_excerpts__"][0]["passage_id"] == "P-LOCAL-1"
+    assert "[DONE]" in res.text
+    # 상류 query에 발췌 컨텍스트 포함
+    assert "[참고 문서 발췌" in seen["query"]
+    assert "오전동 침수 위험지구 근거 본문" in seen["query"]
+
+
 # ── 3-③. chat 200 + 첫 이벤트 오류 페이로드 → mock 폴백 ─────────────
 def test_stream_error_event_falls_back_to_mock(client, monkeypatch):
     """모델 서버 미가동 시 UNI RAG가 200 + data:{"error":...}를 주는 케이스."""

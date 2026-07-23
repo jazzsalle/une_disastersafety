@@ -51,6 +51,80 @@
   flex-direction: column;
 }
 
+/* AI Agent 바 — 선택 POI 칩 + 후속 질문 제안 (입력행 위) */
+.ask-agentbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px 0;
+  flex-shrink: 0;
+}
+
+.ask-poichip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 4px 0 8px;
+  border-radius: 1000px;
+  border: 1px solid var(--color-border-brand);
+  background: var(--color-surface-brand-subtle);
+  color: var(--color-text-primary);
+}
+
+.ask-poichip-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text-secondary-2);
+  cursor: pointer;
+}
+
+.ask-poichip-clear:hover {
+  background: var(--color-surface-gray-subtle);
+}
+
+.ask-suggestchip {
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 1000px;
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface-primary);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+}
+
+.ask-suggestchip:hover {
+  border-color: var(--color-border-brand);
+  color: var(--color-text-brand, var(--color-light-blue-500));
+}
+
+/* 응답 속 지명 링크 — 클릭 시 지도 이동·상세조회 */
+.ask-entitylink {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--color-text-brand, var(--color-light-blue-500));
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ask-entitylink:hover {
+  text-decoration: underline;
+}
+
 /* 질의 입력 행 */
 .ask-inputrow {
   display: flex;

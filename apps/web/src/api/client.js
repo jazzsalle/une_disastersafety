@@ -169,21 +169,32 @@ function extractDelta(obj) {
 /**
  * POST /api/chat — UNI RAG SSE 중계 또는 mock JSON 폴백 (백엔드 routers/chat.py 계약).
  *
+ * 스트림 후처리(이 함수가 유일한 구현 지점):
+ * - thinking 제거: 모델이 추론 과정을 본문으로 스트리밍하고 `</think>` 뒤에 실답변이
+ *   오는 케이스 대응 — 마커 발견 전까지 onDelta를 억제하고, 발견 시 이후 텍스트만 표시.
+ *   마커 없이 끝나면 전체를 답변으로 표시(비-thinking 모델 안전).
+ * - `{"__local_excerpts__": [...]}` 이벤트(백엔드 로컬 근거) → onExcerpts·결과로 전달.
+ *   `{"__sources__": [...]}`(UNI RAG 자체 참조)는 무시.
+ *
  * @param {Object} opts
  * @param {string} opts.query                    - 사용자 질의(필수)
  * @param {Array<{role:string, content:string}>} [opts.history] - 대화 이력
  * @param {Object|null} [opts.event]             - 상황(사건) 컨텍스트
- * @param {(delta: string, fullText: string) => void} [opts.onDelta] - SSE 텍스트 조각 콜백
- * @param {(result: {mode: string, text: string}) => void} [opts.onDone] - 종료 콜백(SSE·mock 공통)
+ * @param {{type:"district"|"river", id:string}|null} [opts.poi] - 지도 선택 POI(속성 자동 첨부)
+ * @param {(delta: string, fullText: string) => void} [opts.onDelta] - 표시용 텍스트 조각 콜백
+ * @param {(excerpts: Array) => void} [opts.onExcerpts] - 로컬 근거 발췌 콜백
+ * @param {(result: {mode: string, text: string, excerpts?: Array}) => void} [opts.onDone] - 종료 콜백(SSE·mock 공통)
  * @param {(data: {mode:"mock", notice:string, answer:string, excerpts:Array}) => void} [opts.onMock] - mock 응답 콜백
  * @param {AbortSignal} [opts.signal]
- * @returns {Promise<{mode: string, text: string, data?: Object}>}
+ * @returns {Promise<{mode: string, text: string, excerpts?: Array, data?: Object}>}
  */
 export async function chat({
   query,
   history = [],
   event = null,
+  poi = null,
   onDelta,
+  onExcerpts,
   onDone,
   onMock,
   signal,
@@ -191,7 +202,7 @@ export async function chat({
   const res = await fetch(`${BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query, history, event }),
+    body: JSON.stringify({ query, history, event, poi }),
     signal,
   });
   await raiseForStatus(res, '/chat');
@@ -212,10 +223,30 @@ export async function chat({
   // SSE 분기 — data: 라인 누적(이벤트 단위: 빈 줄 구분, 멀티 data: 라인은 \n 결합)
   const reader = res.body.getReader();
   const decoder = new TextDecoder('utf-8');
+  const THINK_END = '</think>';
   let buffer = '';
-  let fullText = '';
+  let rawText = ''; // 수신 원문 전체(추론 포함)
+  let fullText = ''; // 표시 텍스트(추론 제거 — onDelta·결과 공용)
+  let thinkDone = false; // </think> 통과 여부(마커 없으면 종료 시 전체 표시)
+  let localExcerpts = null;
   let dataLines = [];
   let finished = false;
+
+  const pushDelta = (delta) => {
+    rawText += delta;
+    if (thinkDone) {
+      fullText += delta;
+      onDelta?.(delta, fullText);
+      return;
+    }
+    const idx = rawText.indexOf(THINK_END);
+    if (idx >= 0) {
+      thinkDone = true;
+      fullText = rawText.slice(idx + THINK_END.length).replace(/^\s+/, '');
+      if (fullText) onDelta?.(fullText, fullText);
+    }
+    // 마커 미발견 — 추론 진행 중으로 보고 표시 억제(호출부 스피너 유지)
+  };
 
   const flushEvent = () => {
     if (dataLines.length === 0) return;
@@ -228,17 +259,20 @@ export async function chat({
     let delta = payload;
     try {
       const obj = JSON.parse(payload);
-      if (obj && typeof obj === 'object' && obj.done === true) {
-        finished = true;
+      if (obj && typeof obj === 'object') {
+        if (Array.isArray(obj.__local_excerpts__)) {
+          localExcerpts = obj.__local_excerpts__;
+          if (localExcerpts.length) onExcerpts?.(localExcerpts);
+          return;
+        }
+        if (obj.__sources__) return; // UNI RAG 자체 참조문서 — 미표출
+        if (obj.done === true) finished = true;
       }
       delta = extractDelta(obj);
     } catch {
       // JSON 아님 — 원문 문자열을 델타로 사용
     }
-    if (delta) {
-      fullText += delta;
-      onDelta?.(delta, fullText);
-    }
+    if (delta) pushDelta(delta);
   };
 
   const consumeLine = (rawLine) => {
@@ -273,7 +307,14 @@ export async function chat({
     // 이미 해제된 경우 무시
   }
 
+  if (!thinkDone && !fullText && rawText) {
+    // </think> 마커 없이 종료 — 추론 없는 응답으로 보고 전체를 답변으로 표시
+    fullText = rawText.trim();
+    if (fullText) onDelta?.(fullText, fullText);
+  }
+
   const mode = chatMode || 'uni_rag';
-  onDone?.({ mode, text: fullText });
-  return { mode, text: fullText };
+  const excerpts = localExcerpts && localExcerpts.length ? localExcerpts : undefined;
+  onDone?.({ mode, text: fullText, excerpts });
+  return { mode, text: fullText, excerpts };
 }
