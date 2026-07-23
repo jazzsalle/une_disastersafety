@@ -1,0 +1,26 @@
+# Vercel CLI 업로드 제외 목록 (.gitignore와 별개 — CLI 직접 배포용)
+# 원시데이터·원본 자산 (대용량 — 배포 불필요)
+자연재해저감종합계획 및 하천기본계획
+재난 메타 데이터 정의서_재난판단기준
+SpoqaHanSansNeo-Regular
+UNE Design System
+*사업수행계획서*.pdf
+
+# 빌드·의존성·로컬 산출물 (빌드는 Vercel 클라우드에서 수행)
+node_modules
+dist
+.venv
+venv
+__pycache__
+*.pyc
+.git
+
+# 파이프라인 중간 산출물 (런타임 5종만 필요)
+data/processed/extracted
+data/processed/chunks_raw.jsonl
+data/processed/report.md
+
+# 비밀
+.env
+.env.*
+!.env.example

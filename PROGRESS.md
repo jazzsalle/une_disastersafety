@@ -38,14 +38,20 @@
   - `docs/04_데모시나리오.md`(입력값·클릭 절차·예상 결과·체크리스트 표)·`README.md`(설치·실행·환경변수) 작성
 
 ## In progress
-- **Vercel 배포 전환(브랜치 feature/vercel-deploy)**: 로그인 게이트 + Vercel 구성 구현 완료 — Vercel 프로젝트 생성·배포(사용자 Vercel 로그인 필요) 대기
-  - 신규: 개인 UNE 계정 로그인(`/api/auth/*` — UNI RAG 로그인 프록시, JWT httpOnly 쿠키, 프론트 LoginGate·로그아웃 버튼·chat 401 재로그인), api/index.py·vercel.json, 런타임 데이터 5종 커밋(.gitignore 예외)
-  - pytest 88건 통과(auth 8건 추가), npm build 통과
+- (없음 — Vercel 배포 완료)
+
+## Vercel 배포 (2026-07-23 완료)
+- **https://une-disastersafety.vercel.app** 프로덕션 가동: root 200, /api/health chunks=3974, auth(잘못된 계정 401 — Vercel→UNI RAG 연결 확인), ask(mock)·chat(비로그인 mock) 정상
+- 구성: GitHub 연동(jazzsalle/une_disastersafety) + CLI 배포 병용. feature/vercel-deploy → master merge 완료
+- **GitHub 자동 배포 주의**: 최초 import 시 빈 빌드(Builds 0ms)가 도메인을 점유했었음 — CLI `npx vercel deploy --prod`로 해소. 이후 push 자동 배포가 정상인지 다음 push에서 확인 필요
+- `.vercelignore` 신설 — CLI 업로드에서 원시 PDF 3.7GB·폰트 원본·중간 산출물 제외(없으면 100MB 한도 초과로 실패)
+- Vercel 환경변수(production): VITE_VWORLD_API_KEY(사용자 등록)·UNI_RAG_BASE_URL. 계정류는 개인 로그인 방식이라 불필요
+- 로컬 Vercel CLI 로그인됨(.vercel/ 링크 — gitignore)
 
 ## Next steps
-1. **Vercel 배포**: `npx vercel`(사용자 로그인) 또는 GitHub 리포 연결 → 환경변수 `VITE_VWORLD_API_KEY`·`UNI_RAG_BASE_URL` 설정 → /api/health chunks=3974 확인 → 로그인·S1 시나리오 확인
-2. **VWorld 키에 배포 도메인 등록**(vworld.kr) — 등록 전엔 지도 키 안내 표시
-3. 배포 검증 후 feature/vercel-deploy → master merge
+1. **VWorld 키에 배포 도메인 등록(사용자)**: vworld.kr 키 설정에 `une-disastersafety.vercel.app` 추가 — 등록 전엔 지도 타일 대신 키 안내 표시
+2. 브라우저 데모: 배포 URL 접속 → 개인 UNE 계정 로그인 → S1~S3 시나리오(docs/04) 확인
+3. Vercel 프로덕션 브랜치 설정을 master로 확인/복원(사용자 — 현재 feature/vercel-deploy로 변경해둔 상태)
 4. UNI RAG GPU 서버 가동 시 챗봇 실중계 재확인(코드 수정 불필요), ANTHROPIC_API_KEY 기입 시 ask 실 LLM 경로 확인
 
 ## 결정 필요 (사용자 확인 대기 — 권장안으로 우선 구현함)

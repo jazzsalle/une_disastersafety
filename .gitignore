@@ -34,3 +34,4 @@ data/index/
 # OS/편집기
 .DS_Store
 Thumbs.db
+.vercel
