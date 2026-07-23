@@ -58,8 +58,11 @@ Capabilities: https://api.vworld.kr/req/wmts/1.0.0/{키}/WMTSCapabilities.xml
 ### 3.3 2D데이터 API (필수 — 행정경계·하천망)
 - 엔드포인트: `https://api.vworld.kr/req/data?service=data&request=GetFeature&data={레이어}&attrFilter={필터}&key={키}` (GeoJSON 응답)
 - 시군구 경계: `LT_C_ADSIGG_INFO` + 행정코드 필터(의왕 41430·구미 47190·남원 45190) → L3 경계
-- 하천중심선: `LT_C_WKMSTRM`(국가하천)·지방하천 레이어 + 하천명 필터(요천·구미천·안양천) → L2 구간
-- Phase 1에서 1회 조회해 `data/manual/geo.json`에 저장(런타임 의존 없음 — 오프라인 데모 가능). 레이어명·필터는 개발 시 레퍼런스에서 최종 확인
+- 하천망: `LT_C_WKMSTRM` + `attrFilter=riv_nm:=:{하천명}` + `geomFilter=BOX({지자체 경계 bbox±0.03°})`
+  → L2 하천 실형상. **실조회 확인(2026-07-23): 본 레이어는 면형(MultiPolygon — 하천 수면 형상)**이며
+  bbox 필터로 전국 동명 하천 오매칭·광역 하천(안양천)의 타 지자체 구간 유입을 방지한다.
+  조회 실패 시 기존 대표좌표 근사선(provisional) 폴백 — `pipeline/fetch_geo.py fetch_river_geometry()`
+- Phase 1에서 1회 조회해 `data/manual/geo.json`에 저장(런타임 의존 없음 — 오프라인 데모 가능)
 
 ### 3.4 선택·고도화 API
 - **이미지 API(StaticMap)**: 데모 문서·카드 썸네일용 정적 지도 — Phase 4에서 필요 시

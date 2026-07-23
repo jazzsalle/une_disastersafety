@@ -227,6 +227,107 @@ def fetch_sigungu_boundary(admin_code: str, key: str | None,
     return None
 
 
+def geometry_bbox(geometry: dict[str, Any] | None) -> tuple[float, float, float, float] | None:
+    """GeoJSON geometry의 [minx, miny, maxx, maxy] — 좌표 재귀 순회."""
+    if not geometry:
+        return None
+    xs: list[float] = []
+    ys: list[float] = []
+
+    def walk(node: Any) -> None:
+        if (isinstance(node, (list, tuple)) and len(node) >= 2
+                and all(isinstance(v, (int, float)) for v in node[:2])):
+            xs.append(float(node[0]))
+            ys.append(float(node[1]))
+            return
+        if isinstance(node, (list, tuple)):
+            for child in node:
+                walk(child)
+
+    walk(geometry.get("coordinates"))
+    if not xs:
+        return None
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def fetch_river_geometry(river_id: str, name: str, key: str | None,
+                         bbox: tuple[float, float, float, float] | None,
+                         ) -> dict[str, Any] | None:
+    """하천 실형상(GeoJSON) — 캐시 우선, VWorld 하천망 LT_C_WKMSTRM.
+
+    LT_C_WKMSTRM은 하천망 면형(MultiPolygon) 레이어다 — 하천 수면 형태 그대로 표출.
+    bbox(해당 지자체 실경계 ± 여유)를 geomFilter로 걸어 전국 동명 하천 오매칭을
+    방지하고, 광역 하천(안양천 등)은 과업 지자체 인근 구간만 취득한다.
+    """
+    cache_path = CACHE_DIR / f"river_{river_id}.json"
+    if cache_path.is_file():
+        return read_json(cache_path).get("geometry")
+    if not key or not bbox:
+        return None
+    margin = 0.03
+    minx, miny, maxx, maxy = bbox
+    geom_filter = f"BOX({minx - margin},{miny - margin},{maxx + margin},{maxy + margin})"
+    for attr_filter in (f"riv_nm:=:{name}", f"riv_nm:like:{name}"):
+        params = {
+            "service": "data",
+            "request": "GetFeature",
+            "data": "LT_C_WKMSTRM",
+            "attrFilter": attr_filter,
+            "geomFilter": geom_filter,
+            "key": key,
+            "format": "json",
+            "geometry": "true",
+            "crs": "EPSG:4326",
+            "size": "1000",
+            "domain": os.environ.get("VWORLD_DOMAIN", "localhost"),
+        }
+        try:
+            data = http_get_json(VWORLD_DATA_URL, params)
+            response = data.get("response", {})
+            if response.get("status") != "OK":
+                # NOT_FOUND는 like 폴백으로 조용히 진행, 그 외는 경고
+                if response.get("status") != "NOT_FOUND":
+                    print(f"  [경고] LT_C_WKMSTRM {name} 응답 상태: "
+                          f"{response.get('status')} — {response.get('error', {})}")
+                continue
+            features = (
+                response.get("result", {})
+                .get("featureCollection", {})
+                .get("features", [])
+            )
+            polygons: list[Any] = []
+            lines: list[Any] = []
+            for feature in features:
+                geom = feature.get("geometry") or {}
+                gtype, coords = geom.get("type"), geom.get("coordinates") or []
+                if gtype == "Polygon":
+                    polygons.append(coords)
+                elif gtype == "MultiPolygon":
+                    polygons.extend(coords)
+                elif gtype == "LineString":
+                    lines.append(coords)
+                elif gtype == "MultiLineString":
+                    lines.extend(coords)
+            if polygons:
+                geometry: dict[str, Any] = {"type": "MultiPolygon", "coordinates": polygons}
+                segments = len(polygons)
+            elif lines:
+                geometry = {"type": "MultiLineString", "coordinates": lines}
+                segments = len(lines)
+            else:
+                continue
+            write_json(cache_path, {"river_id": river_id, "name": name,
+                                    "attr_filter": attr_filter,
+                                    "geom_filter": geom_filter,
+                                    "segment_count": segments,
+                                    "geometry": geometry,
+                                    "api": "LT_C_WKMSTRM"})
+            return geometry
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            print(f"  [경고] LT_C_WKMSTRM {name} 호출 실패: {exc}")
+    return None
+
+
 def fetch_geocode(district_code: str, address: str, key: str | None) -> dict[str, float] | None:
     """지번주소 → 좌표(지오코더 API type=PARCEL) — 캐시 우선."""
     cache_path = CACHE_DIR / f"geocode_{district_code}.json"
@@ -348,15 +449,37 @@ def build_district_features(districts: list[dict[str, Any]],
     return features, geocoded
 
 
-def build_l2_features(rivers: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def build_l2_features(rivers: list[dict[str, Any]], key: str | None,
+                      admin_bboxes: dict[str, tuple[float, float, float, float]],
+                      ) -> tuple[list[dict[str, Any]], int]:
+    """L2 하천선 Feature 목록과 실중심선 성공 수 — 실패 시 근사선 유지."""
     features: list[dict[str, Any]] = []
+    fetched = 0
     for river in rivers:
         river_id = river["river_id"]
         line = RIVER_LINES[river_id]
         profile = river.get("profile_evidence") or {}
+        source: dict[str, Any] = {
+            "source_asset_id": river.get("source_asset_id"),
+            "plan_name": river.get("plan_name"),
+            "doc": profile.get("doc"),
+            "chapter_page": profile.get("chapter_page"),
+        }
+        geometry = fetch_river_geometry(
+            river_id, river["name"], key, admin_bboxes.get(river["admin_code"]))
+        if geometry is not None:
+            fetched += 1
+            is_provisional = False
+            geometry_note = ("VWorld 하천망 LT_C_WKMSTRM 실형상(면형) — "
+                             "지자체 경계 bbox 내 구간, EPSG:4326")
+            source["geometry_api"] = "VWorld 2D데이터 API LT_C_WKMSTRM(riv_nm)"
+        else:
+            geometry = {"type": "LineString", "coordinates": line["coordinates"]}
+            is_provisional = True
+            geometry_note = line["geometry_note"]
         features.append({
             "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": line["coordinates"]},
+            "geometry": geometry,
             "properties": {
                 "id": river_id,
                 "name": river["name"],
@@ -364,17 +487,12 @@ def build_l2_features(rivers: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "admin_name": river.get("admin_name"),
                 "layer": "L2",
                 "grade": river.get("grade"),
-                "provisional": True,
-                "geometry_note": line["geometry_note"],
-                "source": {
-                    "source_asset_id": river.get("source_asset_id"),
-                    "plan_name": river.get("plan_name"),
-                    "doc": profile.get("doc"),
-                    "chapter_page": profile.get("chapter_page"),
-                },
+                "provisional": is_provisional,
+                "geometry_note": geometry_note,
+                "source": source,
             },
         })
-    return features
+    return features, fetched
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +518,13 @@ def main() -> int:
 
     l3_features, l3_fetched, l3_provisional = build_l3_features(key)
     district_features, geocoded = build_district_features(districts, key)
-    l2_features = build_l2_features(rivers)
+    # 하천 실중심선 조회 범위 = 해당 지자체 실경계 bbox(L3 빌드 결과 재사용)
+    admin_bboxes = {
+        f["properties"]["admin_code"]: bbox
+        for f in l3_features
+        if (bbox := geometry_bbox(f.get("geometry"))) is not None
+    }
+    l2_features, l2_fetched = build_l2_features(rivers, key, admin_bboxes)
 
     features = l3_features + l2_features + district_features
     counts = {
@@ -434,6 +558,7 @@ def main() -> int:
     print(f"  Feature {len(features)}건 — L1 {counts['L1']} / L2 {counts['L2']} / "
           f"L3 {counts['L3']} / L4 {counts['L4']}")
     print(f"  L3 실경계 {l3_fetched}건 · L3 근사 {l3_provisional}건 · "
+          f"L2 실형상 {l2_fetched}건 · "
           f"지오코딩 보완 {geocoded}건 · provisional {provisional_total}건")
     return 0
 

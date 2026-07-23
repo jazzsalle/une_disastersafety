@@ -78,8 +78,10 @@ function hasGeometry(feature) {
 
 const MARKER_BASE = { radius: 7, weight: 2, fillOpacity: 0.85, opacity: 1 };
 const MARKER_ACTIVE = { radius: 11, weight: 3 };
-const RIVER_BASE = { weight: 3, opacity: 0.9 };
-const RIVER_ACTIVE = { weight: 6, opacity: 1 };
+// 하천 L2: 실형상(하천망 면형 MultiPolygon)·근사선(LineString) 공용 —
+// fill*은 폴리곤에만 적용되고 폴리라인에서는 무시된다
+const RIVER_BASE = { weight: 2, opacity: 0.9, fillOpacity: 0.35 };
+const RIVER_ACTIVE = { weight: 5, opacity: 1, fillOpacity: 0.55 };
 
 export default function MapViewer() {
   const { state, actions } = useAppState();
