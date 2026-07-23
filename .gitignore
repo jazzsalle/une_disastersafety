@@ -36,5 +36,5 @@ data/index/
 Thumbs.db
 .vercel
 
-# Claude Code 로컬 아티팩트
-.claude/
+# Claude Code 로컬 아티팩트(런타임 락파일만 제외 — agents·skills 구성은 커밋 대상)
+.claude/scheduled_tasks.lock
