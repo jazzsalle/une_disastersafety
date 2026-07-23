@@ -192,7 +192,32 @@ def test_chat_5xx_falls_back_to_mock(client, monkeypatch):
     _assert_no_secret(res, (ACCOUNT, PASSWORD, "tok-a"))
 
 
-# ── 3-③. JWT 캐시 후 401 → 1회 재로그인·재시도 성공 ──────────────────
+# ── 3-③. chat 200 + 첫 이벤트 오류 페이로드 → mock 폴백 ─────────────
+def test_stream_error_event_falls_back_to_mock(client, monkeypatch):
+    """모델 서버 미가동 시 UNI RAG가 200 + data:{"error":...}를 주는 케이스."""
+    _set_credentials(monkeypatch)
+    error_sse = b'data: {"error": "LLM \xec\x97\xb0\xea\xb2\xb0 \xec\x8b\xa4\xed\x8c\xa8"}\n\ndata: [DONE]\n\n'
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/login":
+            return httpx.Response(200, json={"token": "tok-e"})
+        if request.url.path == "/chat/":
+            return httpx.Response(
+                200, content=error_sse, headers={"content-type": "text/event-stream"}
+            )
+        return httpx.Response(404)
+
+    _use_transport(monkeypatch, handler)
+    res = client.post("/api/chat", json={"query": "침수 피해"})
+    assert res.status_code == 200
+    assert res.headers["x-chat-mode"] == "mock"
+    body = res.json()
+    assert body["mode"] == "mock"
+    assert uni_rag.MOCK_NOTICE in body["answer"]
+    _assert_no_secret(res, (ACCOUNT, PASSWORD, "tok-e"))
+
+
+# ── 3-④. JWT 캐시 후 401 → 1회 재로그인·재시도 성공 ──────────────────
 def test_relogin_once_on_401_with_cached_jwt(client, monkeypatch):
     _set_credentials(monkeypatch)
     state = {"login": 0, "chat": 0, "valid": None}

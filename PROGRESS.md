@@ -1,12 +1,20 @@
 # PROGRESS
 
 ## Last updated
-2026-07-23 (야간 자율 진행 세션 — 사용자 취침 중 /phase-run 연속 실행)
+2026-07-23 오전 (회사 PC 세션 — clone·환경 재구축·env 배선 수정·UNI RAG 재확인)
 
 ## Current goal
-재난안전 AI 시범 서비스 1차 POC: Phase 1 완료(PASS) → Phase 2~4 순차 진행 중 (대상: 의왕/구미/남원)
+재난안전 AI 시범 서비스 1차 POC: Phase 1~4 완료 — 회사 PC 데모 리허설 준비 완료
 
-## Done this session
+## Done this session (회사 PC, 2026-07-23 오전)
+- **회사 PC 환경 재구축**: clone(04922fe — 어젯밤 push 반영 확인)·venv·npm 설치, 사용자 제공 .env(VWorld·UNI RAG 기입, ANTHROPIC 비어있음→ask mock)·원시 PDF 폴더 복사
+- **파이프라인 재실행**: chunks.jsonl 3,974청크 — 집 PC와 동일, report.md 검증 전 항목 통과 (extract 약 15분)
+- **pytest 80건 통과**(신규 1건 포함) · verify_scenarios.py S1·S2·S3 PASS, 체크리스트 8/8
+- **env 배선 수정(신규 발견 버그)**: README는 루트 .env 하나로 안내하지만 백엔드·프론트 모두 이를 로드하지 않았음(파이프라인만 자체 로더 보유) → apps/api/config.py에 루트 .env 로더 추가(셸 환경변수 우선, 테스트는 delenv 격리라 안전), apps/web/vite.config.js에 envDir:'../..' 추가(VITE_ 접두사만 클라이언트 노출 — 비밀 안전). 빌드 산출물에 VWorld 키 주입 확인
+- **UNI RAG 실연동 재확인**: 로그인 200·JWT·SSE 중계까지 실연동(uni_rag 모드) 동작 확인. 단 모델 3종 여전히 available:false(GPU 미가동) → 서버가 **HTTP 200 + data:{"error":...}** SSE를 반환하는 케이스 발견
+- **챗봇 폴백 보강**: 첫 SSE 이벤트가 오류 페이로드면 mock 폴백(services/uni_rag.py _peek_prelude/_sse_first_error, 테스트 추가). GPU 가동 시 첫 이벤트가 delta라 코드 수정 없이 실중계됨
+
+## Done (어젯밤 야간 자율 세션)
 - **Phase 1 완료 — evaluator PASS(9개 기준 전 항목)**: planner→generator(T1~T10)→evaluator 오케스트레이션
   - 저장소 골격: apps/api·apps/web·pipeline·data/manual
   - `pipeline/`: config.py(문서 6종 레지스트리, PDF 29개)·extract_pdf.py·chunk.py·tag_meta.py·build_structured.py·fetch_geo.py·run_all.py
@@ -30,12 +38,12 @@
   - `docs/04_데모시나리오.md`(입력값·클릭 절차·예상 결과·체크리스트 표)·`README.md`(설치·실행·환경변수) 작성
 
 ## In progress
-- (없음 — Phase 1~4 전체 완료)
+- 서버 기동 중(회사 PC): 백엔드 8000·프론트 5173 — 브라우저 리허설 대기
 
 ## Next steps
-1. **내일(회사 PC) 사용자 결정·보완 — 아래 "결정 필요" 섹션 처리** (특히 push, UNI RAG 실 chat 재확인)
-2. 브라우저 실 데모 리허설: 백엔드+프론트 기동 후 docs/04 절차대로 화면 확인(VWorld 키·다크 모드 포함)
-3. 잔여 고도화(선택): UNI RAG 모델 가동 시 챗봇 실연동 확인, Claude API 키로 ask 실 LLM 경로 확인
+1. **브라우저 실 데모 리허설(사용자)**: http://localhost:5173 접속, docs/04 절차대로 화면 확인 — 특히 VWorld 타일 표출(도메인 등록에 localhost 필요할 수 있음 — 안 뜨면 vworld.kr 키 설정에서 localhost 추가)·다크 모드
+2. env 배선 수정분 push 여부 결정(로컬 커밋됨)
+3. UNI RAG GPU 서버 가동 시 챗봇 실중계 재확인(코드 수정 불필요), ANTHROPIC_API_KEY 기입 시 ask 실 LLM 경로 확인
 
 ## 결정 필요 (사용자 확인 대기 — 권장안으로 우선 구현함)
 1. ~~UNI RAG 계정~~ **(해소 — 취침 중 사용자 제공)**: 계정 .env 기입 완료, 로그인 성공 확인. 잔여: **chat 실호출은 UNI RAG 모델 서버(GPU) 가동 후 재확인 필요**(현재 500 → mock 폴백 동작). 이 계정이 개인 계정이므로 데모용 서비스 계정 전환 여부는 추후 판단

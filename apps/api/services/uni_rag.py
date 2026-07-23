@@ -11,6 +11,7 @@
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -185,25 +186,65 @@ def chat(
         return build_mock_answer(query, history, event)
     try:
         upstream = get_client().chat_stream(query, history, event)
+        prelude, tail = _peek_prelude(upstream)
     except Exception as exc:  # noqa: BLE001 — 연동 실패는 조용히 mock 폴백
         # 주의: 자격증명·토큰이 로그에 남지 않도록 예외 타입·요약만 기록
         logger.warning("UNI RAG 연동 실패 — mock 폴백 (%s: %s)", type(exc).__name__, exc)
         return build_mock_answer(query, history, event)
+    error = _sse_first_error(prelude)
+    if error is not None:
+        # HTTP 200이어도 첫 이벤트가 오류 페이로드면 실질 실패(모델 서버 미가동 등)
+        upstream.close()
+        logger.warning("UNI RAG 스트림 오류 이벤트 — mock 폴백 (%s)", error)
+        return build_mock_answer(query, history, event)
     return StreamingResponse(
-        _relay(upstream),
+        _relay(upstream, prelude, tail),
         media_type="text/event-stream",
         headers={"X-Chat-Mode": "uni_rag", "Cache-Control": "no-cache"},
     )
 
 
-def _relay(upstream: httpx.Response) -> Iterator[bytes]:
-    """상류 SSE 바이트를 그대로 중계하고 종료 시 커넥션을 닫는다."""
+# 첫 이벤트 오류 검사용 선독 한도 — 이 안에 이벤트 경계가 없으면 정상 스트림으로 간주
+_PEEK_MAX = 2048
+
+
+def _peek_prelude(upstream: httpx.Response) -> tuple[bytes, Iterator[bytes] | None]:
+    """스트림 앞부분(첫 이벤트 경계 또는 _PEEK_MAX까지)을 선독해 반환한다."""
+    if upstream.is_stream_consumed:
+        # 이미 로드된 응답(비스트림 전송·테스트 MockTransport 등)
+        return upstream.content, None
+    tail = upstream.iter_raw()
+    buffer = b""
+    for chunk in tail:
+        buffer += chunk
+        if b"\n\n" in buffer or len(buffer) >= _PEEK_MAX:
+            break
+    return buffer, tail
+
+
+def _sse_first_error(prelude: bytes) -> str | None:
+    """선독 버퍼의 첫 SSE 이벤트가 {"error": ...} JSON이면 오류 메시지를 반환."""
+    head = prelude.split(b"\n\n", 1)[0].strip()
+    if not head.startswith(b"data:"):
+        return None
     try:
-        if upstream.is_stream_consumed:
-            # 이미 로드된 응답(비스트림 전송·테스트 MockTransport 등) — content 일괄 중계
-            yield upstream.content
-        else:
-            yield from upstream.iter_raw()
+        payload = json.loads(head[len(b"data:"):].decode("utf-8").strip())
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if isinstance(payload, dict) and payload.get("error"):
+        return str(payload["error"])
+    return None
+
+
+def _relay(
+    upstream: httpx.Response, prelude: bytes, tail: Iterator[bytes] | None
+) -> Iterator[bytes]:
+    """선독분·잔여 SSE 바이트를 그대로 중계하고 종료 시 커넥션을 닫는다."""
+    try:
+        if prelude:
+            yield prelude
+        if tail is not None:
+            yield from tail
     finally:
         upstream.close()
 
