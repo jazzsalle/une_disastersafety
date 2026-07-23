@@ -38,12 +38,15 @@
   - `docs/04_데모시나리오.md`(입력값·클릭 절차·예상 결과·체크리스트 표)·`README.md`(설치·실행·환경변수) 작성
 
 ## In progress
-- 서버 기동 중(회사 PC): 백엔드 8000·프론트 5173 — 브라우저 리허설 대기
+- **Vercel 배포 전환(브랜치 feature/vercel-deploy)**: 로그인 게이트 + Vercel 구성 구현 완료 — Vercel 프로젝트 생성·배포(사용자 Vercel 로그인 필요) 대기
+  - 신규: 개인 UNE 계정 로그인(`/api/auth/*` — UNI RAG 로그인 프록시, JWT httpOnly 쿠키, 프론트 LoginGate·로그아웃 버튼·chat 401 재로그인), api/index.py·vercel.json, 런타임 데이터 5종 커밋(.gitignore 예외)
+  - pytest 88건 통과(auth 8건 추가), npm build 통과
 
 ## Next steps
-1. **브라우저 실 데모 리허설(사용자)**: http://localhost:5173 접속, docs/04 절차대로 화면 확인 — 특히 VWorld 타일 표출(도메인 등록에 localhost 필요할 수 있음 — 안 뜨면 vworld.kr 키 설정에서 localhost 추가)·다크 모드
-2. env 배선 수정분 push 여부 결정(로컬 커밋됨)
-3. UNI RAG GPU 서버 가동 시 챗봇 실중계 재확인(코드 수정 불필요), ANTHROPIC_API_KEY 기입 시 ask 실 LLM 경로 확인
+1. **Vercel 배포**: `npx vercel`(사용자 로그인) 또는 GitHub 리포 연결 → 환경변수 `VITE_VWORLD_API_KEY`·`UNI_RAG_BASE_URL` 설정 → /api/health chunks=3974 확인 → 로그인·S1 시나리오 확인
+2. **VWorld 키에 배포 도메인 등록**(vworld.kr) — 등록 전엔 지도 키 안내 표시
+3. 배포 검증 후 feature/vercel-deploy → master merge
+4. UNI RAG GPU 서버 가동 시 챗봇 실중계 재확인(코드 수정 불필요), ANTHROPIC_API_KEY 기입 시 ask 실 LLM 경로 확인
 
 ## 결정 필요 (사용자 확인 대기 — 권장안으로 우선 구현함)
 1. ~~UNI RAG 계정~~ **(해소 — 취침 중 사용자 제공)**: 계정 .env 기입 완료, 로그인 성공 확인. 잔여: **chat 실호출은 UNI RAG 모델 서버(GPU) 가동 후 재확인 필요**(현재 500 → mock 폴백 동작). 이 계정이 개인 계정이므로 데모용 서비스 계정 전환 여부는 추후 판단

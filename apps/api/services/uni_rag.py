@@ -38,6 +38,10 @@ class UniRagError(RuntimeError):
     """UNI RAG 연동 실패(로그인·chat 오류) — 상위에서 mock 폴백 처리."""
 
 
+class UniRagAuthError(UniRagError):
+    """인증 실패(자격증명 오류·토큰 만료) — mock 폴백 대신 401로 구분 처리."""
+
+
 class UniRagClient:
     """UNI RAG System HTTP 어댑터 — JWT 캐시·재로그인 포함.
 
@@ -73,11 +77,19 @@ class UniRagClient:
         self._token = None
 
     # ── 인증 ──────────────────────────────────────────────────────────
-    def login(self) -> str:
-        """POST /auth/login {account, password} → JWT 발급·캐시.
+    @staticmethod
+    def _parse_token(payload) -> str | None:
+        """응답 구조 편차 대응: 최상위 token/access_token, data.token/access_token 모두 인식."""
+        if not isinstance(payload, dict):
+            return None
+        token = payload.get("token") or payload.get("access_token")
+        data = payload.get("data")
+        if not token and isinstance(data, dict):
+            token = data.get("token") or data.get("access_token")
+        return token if isinstance(token, str) and token else None
 
-        응답 구조 편차 대응: 최상위 token/access_token, data.token/access_token 모두 인식.
-        """
+    def login(self) -> str:
+        """POST /auth/login {account, password}(환경변수 계정) → JWT 발급·캐시."""
         account = self._env("UNI_RAG_ACCOUNT")
         password = self._env("UNI_RAG_PASSWORD")
         if not account:
@@ -86,16 +98,26 @@ class UniRagClient:
             "/auth/login", json={"account": account, "password": password}
         )
         resp.raise_for_status()
-        payload = resp.json()
-        token: str | None = None
-        if isinstance(payload, dict):
-            token = payload.get("token") or payload.get("access_token")
-            data = payload.get("data")
-            if not token and isinstance(data, dict):
-                token = data.get("token") or data.get("access_token")
-        if not isinstance(token, str) or not token:
+        token = self._parse_token(resp.json())
+        if not token:
             raise UniRagError("로그인 응답에 토큰 없음")
         self._token = token
+        return token
+
+    def login_with(self, account: str, password: str) -> str:
+        """개인 계정 로그인(/api/auth/login 프록시용) — 토큰 반환만, 캐시 안 함.
+
+        자격증명 오류(400/401/403)는 UniRagAuthError, 그 외 실패는 UniRagError.
+        """
+        resp = self._client_http().post(
+            "/auth/login", json={"account": account, "password": password}
+        )
+        if resp.status_code in (400, 401, 403):
+            raise UniRagAuthError(f"로그인 거부 HTTP {resp.status_code}")
+        resp.raise_for_status()
+        token = self._parse_token(resp.json())
+        if not token:
+            raise UniRagError("로그인 응답에 토큰 없음")
         return token
 
     # ── 채팅 ──────────────────────────────────────────────────────────
@@ -147,6 +169,25 @@ class UniRagClient:
             raise UniRagError(f"chat HTTP {status}")
         return resp
 
+    def chat_stream_with_token(
+        self, token: str, query: str, history: list[dict], event: dict | None = None
+    ) -> httpx.Response:
+        """개인 토큰(로그인 쿠키)으로 POST /chat/ SSE.
+
+        401은 서버측 재로그인이 불가하므로 UniRagAuthError — 라우터가 401을 반환해
+        프론트가 재로그인을 유도한다. 그 외 4xx·5xx는 UniRagError(mock 폴백).
+        """
+        payload = self.build_payload(query, history, event)
+        resp = self._send_chat(token, payload)
+        if resp.status_code == 401:
+            resp.close()
+            raise UniRagAuthError("토큰 만료·무효")
+        if resp.status_code >= 400:
+            status = resp.status_code
+            resp.close()
+            raise UniRagError(f"chat HTTP {status}")
+        return resp
+
 
 # ── 모듈 싱글턴 ───────────────────────────────────────────────────────
 _client: UniRagClient | None = None
@@ -172,16 +213,37 @@ def reset_client() -> None:
 
 
 # ── 라우터 진입점 ─────────────────────────────────────────────────────
+def login_with(account: str, password: str) -> str:
+    """/api/auth/login 프록시 — 개인 계정으로 상류 로그인, JWT 반환(캐시 안 함)."""
+    return get_client().login_with(account, password)
+
+
 def chat(
-    query: str, history: list[dict] | None = None, event: dict | None = None
+    query: str,
+    history: list[dict] | None = None,
+    event: dict | None = None,
+    token: str | None = None,
 ) -> StreamingResponse | dict:
     """/api/chat 처리 — UNI RAG SSE 중계 또는 결정적 mock 응답(dict).
 
-    - UNI_RAG_ACCOUNT 미설정 → mock dict
-    - 로그인·chat 실패(timeout·4xx·5xx 등) → 서버 로그 warning + mock dict
+    - token(개인 로그인 쿠키) 있음 → 그 토큰으로 상류 호출.
+      401은 UniRagAuthError로 전파(라우터가 401 반환 — 프론트 재로그인 유도)
+    - token 없음: UNI_RAG_ACCOUNT 환경변수 있으면 서버 계정 경로(로컬 개발용),
+      없으면 mock dict
+    - 연동 실패(timeout·4xx·5xx·오류 이벤트) → 서버 로그 warning + mock dict
     - 성공 → text/event-stream 중계(StreamingResponse, X-Chat-Mode: uni_rag)
     """
     history = history or []
+    if token:
+        try:
+            upstream = get_client().chat_stream_with_token(token, query, history, event)
+            prelude, tail = _peek_prelude(upstream)
+        except UniRagAuthError:
+            raise  # 라우터에서 401 처리
+        except Exception as exc:  # noqa: BLE001 — 연동 실패는 조용히 mock 폴백
+            logger.warning("UNI RAG 연동 실패 — mock 폴백 (%s: %s)", type(exc).__name__, exc)
+            return build_mock_answer(query, history, event)
+        return _stream_or_mock(upstream, prelude, tail, query, history, event)
     if not os.environ.get("UNI_RAG_ACCOUNT"):
         return build_mock_answer(query, history, event)
     try:
@@ -191,6 +253,18 @@ def chat(
         # 주의: 자격증명·토큰이 로그에 남지 않도록 예외 타입·요약만 기록
         logger.warning("UNI RAG 연동 실패 — mock 폴백 (%s: %s)", type(exc).__name__, exc)
         return build_mock_answer(query, history, event)
+    return _stream_or_mock(upstream, prelude, tail, query, history, event)
+
+
+def _stream_or_mock(
+    upstream: httpx.Response,
+    prelude: bytes,
+    tail: Iterator[bytes] | None,
+    query: str,
+    history: list[dict],
+    event: dict | None,
+) -> StreamingResponse | dict:
+    """첫 이벤트가 오류 페이로드면 mock 폴백, 아니면 SSE 중계 응답 구성."""
     error = _sse_first_error(prelude)
     if error is not None:
         # HTTP 200이어도 첫 이벤트가 오류 페이로드면 실질 실패(모델 서버 미가동 등)
