@@ -6,6 +6,7 @@ export default defineConfig({
   envDir: '../..',
   plugins: [react()],
   server: {
+    host: true, // LAN 접속 허용(내부 IP 데모용) — API는 아래 프록시 경유라 백엔드는 localhost 유지
     port: 5173,
     proxy: {
       '/api': 'http://localhost:8000',
