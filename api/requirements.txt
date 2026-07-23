@@ -1,0 +1,6 @@
+# Vercel serverless runtime deps (subset of apps/api/requirements.txt)
+# uvicorn/pytest excluded - not needed on Vercel. kiwipiepy excluded (import-guarded fallback tokenizer).
+fastapi>=0.111
+pydantic>=2
+rank-bm25>=0.2.2
+httpx>=0.27

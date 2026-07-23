@@ -71,6 +71,23 @@ async function postJson(path, body) {
   return res.json();
 }
 
+// ── auth (UNI RAG 개인 계정 로그인 — httpOnly 쿠키, 클라이언트 저장 없음) ──
+
+/** GET /api/auth/me → {logged_in: boolean} */
+export function authMe() {
+  return getJson('/auth/me');
+}
+
+/** POST /api/auth/login {account, password} → {ok} (401: 자격증명 오류, 502: 상류 연결 실패) */
+export function authLogin({ account, password }) {
+  return postJson('/auth/login', { account, password });
+}
+
+/** POST /api/auth/logout → {ok} */
+export function authLogout() {
+  return postJson('/auth/logout', {});
+}
+
 // ── GET ──────────────────────────────────────────────────────────────
 
 /** GET /api/health → {status, corpus:{chunks, criteria, districts, rivers, geo_features}} */

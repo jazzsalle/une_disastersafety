@@ -8,6 +8,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
 import { chat } from '../../api/client.js';
+import { requireLogin } from '../auth/LoginGate.jsx';
 import Button from '../../ds/components/actions/Button.jsx';
 import Badge from '../../ds/components/display/Badge.jsx';
 import Spinner from '../../ds/components/feedback/Spinner.jsx';
@@ -63,6 +64,16 @@ export default function ChatTab() {
         },
       });
     } catch (err) {
+      if (err?.status === 401) {
+        // 세션 만료 — 로그인 게이트로 복귀
+        actions.updateLastChatMessage({
+          content: '세션이 만료되었습니다. 다시 로그인해 주세요',
+          streaming: false,
+          error: true,
+        });
+        requireLogin();
+        return;
+      }
       actions.updateLastChatMessage({
         content: '응답 수신 실패',
         streaming: false,

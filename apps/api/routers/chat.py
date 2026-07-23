@@ -10,10 +10,11 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Cookie, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
+from routers.auth import COOKIE_NAME
 from services import uni_rag
 
 logger = logging.getLogger("disaster.api")
@@ -37,13 +38,21 @@ class ChatBody(BaseModel):
 
 
 @router.post("/chat")
-def post_chat(body: ChatBody):
-    """챗봇 질의 — UNI RAG SSE 중계 또는 mock 폴백 JSON."""
-    result = uni_rag.chat(
-        query=body.query,
-        history=[m.model_dump() for m in body.history],
-        event=body.event,
-    )
+def post_chat(
+    body: ChatBody,
+    uni_rag_token: str | None = Cookie(default=None, alias=COOKIE_NAME),
+):
+    """챗봇 질의 — 로그인 쿠키(개인 JWT)로 UNI RAG SSE 중계 또는 mock 폴백 JSON."""
+    try:
+        result = uni_rag.chat(
+            query=body.query,
+            history=[m.model_dump() for m in body.history],
+            event=body.event,
+            token=uni_rag_token,
+        )
+    except uni_rag.UniRagAuthError:
+        # 토큰 만료·무효 — 프론트가 재로그인 화면으로 유도
+        raise HTTPException(status_code=401, detail="세션이 만료되었습니다. 다시 로그인해 주세요")
     mode = "uni_rag" if isinstance(result, StreamingResponse) else "mock"
     # 요청 단위 로그 — 서비스 검증 체크리스트 ⑧. 질의 원문 대신 길이만 기록
     # (개인정보 유입 가능성 차단), 자격증명·JWT 등 비밀값 미포함.

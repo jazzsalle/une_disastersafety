@@ -13,6 +13,8 @@
 import { useState } from 'react';
 import { useAppState } from '../state/AppState.jsx';
 import { REGIONS, findRegion, findHazard, alertColor } from '../api/models.js';
+import { authLogout } from '../api/client.js';
+import { requireLogin } from './auth/LoginGate.jsx';
 import { Badge } from '../ds/components/display/Badge.jsx';
 import { IconButton } from '../ds/components/actions/IconButton.jsx';
 import Icon from '../ds/assets/icons/Icon.jsx';
@@ -194,6 +196,34 @@ export default function AppHeader() {
             }}
           />
         )}
+        <Clickable
+          onClick={async () => {
+            try {
+              await authLogout();
+            } catch {
+              // 로그아웃 API 실패해도 게이트 복귀(쿠키 만료 시 등)
+            }
+            requireLogin();
+          }}
+          title="로그아웃"
+          ariaLabel="로그아웃"
+          style={{ borderRadius: 8 }}
+        >
+          <IconButton
+            variant="ghost"
+            color="grayscale"
+            state="default"
+            size="md"
+            badge={false}
+            icon2={
+              <Icon
+                name="로그아웃"
+                size={20}
+                style={{ color: 'var(--color-text-secondary)' }}
+              />
+            }
+          />
+        </Clickable>
         <Clickable
           onClick={actions.toggleTheme}
           title={dark ? '라이트 모드 전환' : '다크 모드 전환'}

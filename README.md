@@ -70,11 +70,28 @@ cp .env.example .env
 | `VITE_VWORLD_API_KEY` | 선택 | VWorld 인증키(프론트 지도 타일용). 미설정 시 지도 영역에 키 발급 안내 표시 |
 | `VWORLD_API_KEY` | 선택 | VWorld 인증키(파이프라인 지오코더·2D데이터용). 위 키와 동일 값 공용 기입 |
 | `UNI_RAG_BASE_URL` | 선택 | UNI RAG System 주소(챗봇 연계, docs/06 참조) |
-| `UNI_RAG_ACCOUNT` | 선택 | UNI RAG 계정. 미설정 시 챗봇 mock 폴백 |
-| `UNI_RAG_PASSWORD` | 선택 | UNI RAG 비밀번호. 미설정 시 챗봇 mock 폴백 |
+| `UNI_RAG_ACCOUNT` | 선택 | (로컬 개발용 폴백) 서버 계정 — 미로그인 상태 챗봇용. 배포에서는 불필요 |
+| `UNI_RAG_PASSWORD` | 선택 | (로컬 개발용 폴백) 위 계정 비밀번호 |
 | `UNI_RAG_MODEL_KEY` | 선택 | 모델 키(qwen3.5-35b, exaone-32b, qwen3-coder-next). 미설정 시 서버 기본 |
 
 - VWorld 인증키는 www.vworld.kr 발급·도메인 등록 후 하나의 키를 두 변수에 공용으로 사용한다.
+
+## 로그인 (UNI RAG 개인 계정)
+
+앱 진입 시 로그인 게이트가 표시되며, **개인 UNE 계정**(UNI RAG System 계정)으로 로그인한다.
+백엔드가 `/api/auth/login`으로 상류 로그인을 프록시하고 JWT를 httpOnly 쿠키로 관리한다
+(클라이언트 저장·서버 저장 없음). 챗봇(`/api/chat`)은 이 토큰으로 호출되며, 만료(401) 시
+재로그인 화면으로 돌아간다.
+
+## Vercel 배포
+
+`vercel.json` 구성: 프론트(apps/web) 정적 빌드 + `api/index.py` 서버리스 함수(서울 icn1).
+런타임 데이터(data/processed 5종 — 리포 커밋본)는 `includeFiles`로 함수에 번들된다.
+
+1. Vercel 프로젝트 생성(GitHub 리포 연결 또는 `npx vercel`)
+2. 환경변수: `VITE_VWORLD_API_KEY`, `UNI_RAG_BASE_URL` (계정류는 개인 로그인 방식이라 불필요)
+3. 배포 후 `GET /api/health`에서 `corpus.chunks=3974` 확인
+4. VWorld 키 설정(www.vworld.kr)에 배포 도메인 추가 — 등록 전에는 지도 영역에 키 안내 표시
 
 ## 프로젝트 구조
 

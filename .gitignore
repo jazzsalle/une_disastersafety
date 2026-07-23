@@ -22,8 +22,13 @@ venv/
 .env.*
 !.env.example
 
-# 데이터 파이프라인 산출물(대용량)
-data/processed/
+# 데이터 파이프라인 산출물(대용량) — 단 런타임 필수 5종은 예외(Vercel 배포 번들용)
+data/processed/*
+!data/processed/chunks.jsonl
+!data/processed/criteria.json
+!data/processed/districts.json
+!data/processed/rivers.json
+!data/processed/geo.json
 data/index/
 
 # OS/편집기
