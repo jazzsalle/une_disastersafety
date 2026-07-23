@@ -47,15 +47,6 @@ VWORLD_DATA_URL = "https://api.vworld.kr/req/data"
 VWORLD_ADDRESS_URL = "https://api.vworld.kr/req/address"
 REQUEST_TIMEOUT_SEC = 15
 
-# OSM Overpass — 하천 중심선(항공영상 기반이라 VWorld 항측 베이스맵과 정합).
-# WKMSTRM(WAMIS 하천망도, 1:25k)은 수십 m 오프셋이 있어 1순위 소스로 쓰지 않는다.
-OVERPASS_ENDPOINTS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-    "https://lz4.overpass-api.de/api/interpreter",
-]
-OSM_ATTRIBUTION = "© OpenStreetMap contributors (ODbL)"
-
 # ---------------------------------------------------------------------------
 # L3 — 시군구 근사 경계(provisional). fetch 성공 시 실경계로 교체된다.
 # 좌표는 십진도(EPSG:4326) [lon, lat]. 행정경계 개형을 근사한 폴리곤.
@@ -257,65 +248,6 @@ def geometry_bbox(geometry: dict[str, Any] | None) -> tuple[float, float, float,
     if not xs:
         return None
     return min(xs), min(ys), max(xs), max(ys)
-
-
-def fetch_river_osm(river_id: str, name: str,
-                    bbox: tuple[float, float, float, float] | None,
-                    ) -> dict[str, Any] | None:
-    """OSM 하천 중심선(waterway, 이름 일치) — 캐시 우선, Overpass 미러 순차 폴백.
-
-    반환: MultiLineString(세그먼트 병합). OSM 미수록·전 미러 실패 시 None
-    (호출부가 WKMSTRM → 근사선으로 폴백).
-    """
-    cache_path = CACHE_DIR / f"river_osm_{river_id}.json"
-    if cache_path.is_file():
-        return read_json(cache_path).get("geometry")
-    if not bbox:
-        return None
-    margin = 0.03
-    minx, miny, maxx, maxy = bbox
-    bb = f"{miny - margin},{minx - margin},{maxy + margin},{maxx + margin}"  # S,W,N,E
-    query = (
-        "[out:json][timeout:25];"
-        f'way["waterway"]["name"="{name}"]({bb});'
-        "(._;>;);out;"
-    )
-    for endpoint in OVERPASS_ENDPOINTS:
-        host = endpoint.split("/")[2]
-        try:
-            body = urllib.parse.urlencode({"data": query}).encode()
-            req = urllib.request.Request(endpoint, data=body, headers={
-                "User-Agent": "une-disaster-poc/0.1 (UNE POC pipeline)",
-                "Content-Type": "application/x-www-form-urlencoded",
-            })
-            with urllib.request.urlopen(req, timeout=35) as resp:
-                payload = json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, OSError, ValueError) as exc:
-            print(f"  [경고] Overpass {host} 실패({name}): {exc}")
-            continue
-        nodes = {
-            e["id"]: [e["lon"], e["lat"]]
-            for e in payload.get("elements", [])
-            if e.get("type") == "node"
-        }
-        lines = []
-        for e in payload.get("elements", []):
-            if e.get("type") != "way":
-                continue
-            coords = [nodes[nid] for nid in e.get("nodes", []) if nid in nodes]
-            if len(coords) >= 2:
-                lines.append(coords)
-        if not lines:
-            print(f"  [안내] OSM에 '{name}' waterway 미수록 — WKMSTRM 폴백")
-            return None
-        geometry = {"type": "MultiLineString", "coordinates": lines}
-        write_json(cache_path, {"river_id": river_id, "name": name,
-                                "bbox": bb, "segment_count": len(lines),
-                                "geometry": geometry,
-                                "api": f"OSM Overpass({host})",
-                                "attribution": OSM_ATTRIBUTION})
-        return geometry
-    return None
 
 
 def fetch_river_geometry(river_id: str, name: str, key: str | None,
@@ -533,19 +465,13 @@ def build_l2_features(rivers: list[dict[str, Any]], key: str | None,
             "doc": profile.get("doc"),
             "chapter_page": profile.get("chapter_page"),
         }
-        # 소스 체인: ① OSM 중심선(베이스맵 정합) → ② WKMSTRM 면형(수십 m 오프셋) → ③ 근사선
-        bbox = admin_bboxes.get(river["admin_code"])
-        geometry = fetch_river_osm(river_id, river["name"], bbox)
+        geometry = fetch_river_geometry(
+            river_id, river["name"], key, admin_bboxes.get(river["admin_code"]))
         if geometry is not None:
             fetched += 1
             is_provisional = False
-            geometry_note = "OSM 하천 중심선(waterway) — 항측 베이스맵 정합, EPSG:4326"
-            source["geometry_api"] = f"OSM Overpass — {OSM_ATTRIBUTION}"
-        elif (geometry := fetch_river_geometry(river_id, river["name"], key, bbox)) is not None:
-            fetched += 1
-            is_provisional = False
             geometry_note = ("VWorld 하천망 LT_C_WKMSTRM 실형상(면형) — "
-                             "원천(WAMIS 1:25k) 특성상 베이스맵 대비 수십 m 오프셋 가능")
+                             "지자체 경계 bbox 내 구간, EPSG:4326")
             source["geometry_api"] = "VWorld 2D데이터 API LT_C_WKMSTRM(riv_nm)"
         else:
             geometry = {"type": "LineString", "coordinates": line["coordinates"]}

@@ -21,8 +21,7 @@ import './map.css';
 
 // ── VWorld WMTS (docs/05_VWorld_API_활용계획.md §2) ──────────────────
 const VWORLD_KEY = import.meta.env.VITE_VWORLD_API_KEY || '';
-const VWORLD_ATTRIBUTION =
-  'VWorld(국토교통부) · 하천형상 © OpenStreetMap contributors';
+const VWORLD_ATTRIBUTION = 'VWorld(국토교통부)';
 const VWORLD_STYLE = { light: 'Base', dark: 'midnight' };
 
 function vworldTileUrl(theme) {
