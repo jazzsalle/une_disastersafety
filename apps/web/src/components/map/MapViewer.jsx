@@ -15,6 +15,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useAppState } from '../../state/AppState.jsx';
 import { geo } from '../../api/client.js';
+import { KIND_COLORS } from '../../api/models.js';
 import Empty from '../../ds/components/feedback/Empty.jsx';
 import './map.css';
 
@@ -36,16 +37,14 @@ function tokenColor(name, fallback) {
   return v || fallback;
 }
 
-/** 재해유형별 마커 색 — docs/03_화면설계.md §3 상태·색상 매핑 규칙 준용 */
+/** 재해유형별 마커 색 — 우측 패널 Badge와 단일 소스(models.js KIND_COLORS) */
 function disasterColors() {
-  return {
-    하천재해: tokenColor('--color-light-blue-500', 'rgb(60,105,252)'),
-    내수재해: tokenColor('--color-purple-500', 'rgb(152,94,255)'),
-    사면재해: tokenColor('--color-red-500', 'rgb(217,45,32)'),
-    토사재해: tokenColor('--color-orange-500', 'rgb(234,88,12)'),
-    대설재해: tokenColor('--color-yellow-500', 'rgb(204,132,0)'),
-    기타: tokenColor('--color-grayscale-500', 'rgb(104,109,120)'),
-  };
+  return Object.fromEntries(
+    Object.entries(KIND_COLORS).map(([kind, entry]) => [
+      kind,
+      tokenColor(entry.token, entry.fallback),
+    ]),
+  );
 }
 
 function escapeHtml(s) {

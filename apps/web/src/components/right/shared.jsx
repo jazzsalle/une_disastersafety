@@ -10,7 +10,7 @@ import { useEffect } from 'react';
 import Icon from '../../ds/assets/icons/Icon.jsx';
 import Empty from '../../ds/components/feedback/Empty.jsx';
 import FilterChip from '../../ds/components/display/FilterChip.jsx';
-import { findHazard } from '../../api/models.js';
+import { findHazard, kindColor } from '../../api/models.js';
 
 // ── 서식 헬퍼 ────────────────────────────────────────────────────────
 
@@ -56,19 +56,9 @@ export function hazardBadgeItems(passage) {
   return items;
 }
 
-/** 위험지구 재해유형(하천재해 등 8종) → Badge color */
-const KIND_BADGE_COLOR = {
-  하천재해: 'primary',
-  내수재해: 'success',
-  사면재해: 'warning',
-  토사재해: 'secondary',
-  바람재해: 'grayscale',
-  가뭄재해: 'grayscale',
-  대설재해: 'grayscale',
-};
-
+/** 위험지구 재해유형(하천재해 등 8종) → Badge color — 지도 마커와 단일 소스(KIND_COLORS) */
 export function kindBadgeColor(kind) {
-  return KIND_BADGE_COLOR[kind] || 'grayscale';
+  return kindColor(kind).badge;
 }
 
 /** 위험 4단 색 토큰 — green → yellow → orange → red (docs/03 §3) */

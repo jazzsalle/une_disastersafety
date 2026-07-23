@@ -80,6 +80,27 @@ export function alertColor(level) {
   return (level && ALERT_COLORS[level]) || ALERT_COLOR_DEFAULT;
 }
 
+/**
+ * 위험지구 재해유형 → 색 단일 소스 — 우측 패널 Badge와 지도 마커가 공유한다.
+ * badge: DS Badge color prop, token: 해당 Badge(variant=solid)가 실제 칠하는
+ * 표면 토큰(라이트/다크 자동), fallback: 토큰 판독 불가 시 라이트 기준 값.
+ */
+export const KIND_COLORS = {
+  하천재해: { badge: 'primary', token: '--color-surface-brand', fallback: 'rgb(60,105,252)' },
+  내수재해: { badge: 'success', token: '--color-surface-success', fallback: 'rgb(29,121,43)' },
+  사면재해: { badge: 'warning', token: '--color-surface-light-warning', fallback: 'rgb(232,154,0)' },
+  토사재해: { badge: 'secondary', token: '--color-surface-warning', fallback: 'rgb(252,107,25)' },
+  바람재해: { badge: 'grayscale', token: '--color-surface-gray', fallback: 'rgb(104,109,120)' },
+  가뭄재해: { badge: 'grayscale', token: '--color-surface-gray', fallback: 'rgb(104,109,120)' },
+  대설재해: { badge: 'grayscale', token: '--color-surface-gray', fallback: 'rgb(104,109,120)' },
+  기타: { badge: 'grayscale', token: '--color-surface-gray', fallback: 'rgb(104,109,120)' },
+};
+
+/** 재해유형 → KIND_COLORS 엔트리(미지정·미지원 값은 기타/회색) */
+export function kindColor(kind) {
+  return KIND_COLORS[kind] || KIND_COLORS['기타'];
+}
+
 /** event_code → HAZARDS 항목 (없으면 undefined) */
 export function findHazard(code) {
   if (!code) return undefined;
