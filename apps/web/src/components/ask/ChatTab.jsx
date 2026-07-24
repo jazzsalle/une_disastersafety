@@ -18,6 +18,7 @@ import {
   buildEntities,
   parseMapCommand,
   splitByEntities,
+  splitMarkdownTables,
   suggestionsFor,
 } from './chatAgent.js';
 import Button from '../../ds/components/actions/Button.jsx';
@@ -85,6 +86,26 @@ export default function ChatTab() {
     if (state.selectedDistrictId) actions.selectDistrict(null);
     if (state.selectedRiverId) actions.selectRiver(null);
   };
+
+  /** 텍스트 → 지명 링크 조각(본문·표 셀 공용) */
+  const renderLinked = (text) =>
+    entities.length
+      ? splitByEntities(text, entities).map((part, k) =>
+          part.entity ? (
+            <button
+              key={k}
+              type="button"
+              className="ask-entitylink"
+              title={`${part.entity.name} — 지도에서 보기`}
+              onClick={() => goToEntity(part.entity)}
+            >
+              {part.text}
+            </button>
+          ) : (
+            <span key={k}>{part.text}</span>
+          ),
+        )
+      : text;
 
   const submit = async (textArg) => {
     if (sending) return;
@@ -213,28 +234,46 @@ export default function ChatTab() {
                 <Spinner size="sm" />
                 <span className="typo-body-sm">응답 생성 중</span>
               </div>
+            ) : m.role === 'assistant' && !m.streaming && !m.error ? (
+              // 완료된 응답: 마크다운 표 → DS 스타일 표, 텍스트 → 지명 링크
+              splitMarkdownTables(m.content).map((seg, si) =>
+                seg.type === 'table' ? (
+                  <div key={si} className="ask-md-tablewrap">
+                    <table className="ask-md-table typo-body-sm">
+                      <thead>
+                        <tr>
+                          {seg.header.map((h, hi) => (
+                            <th key={hi} style={{ textAlign: seg.align[hi] }}>
+                              {renderLinked(h)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {seg.rows.map((row, ri) => (
+                          <tr key={ri}>
+                            {row.map((cell, ci) => (
+                              <td key={ci} style={{ textAlign: seg.align[ci] }}>
+                                {renderLinked(cell)}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p key={si} className="ask-bubble-text typo-body-md">
+                    {renderLinked(seg.text)}
+                  </p>
+                ),
+              )
             ) : (
               <p
                 className="ask-bubble-text typo-body-md"
                 style={m.error ? { color: 'var(--color-text-error)' } : undefined}
               >
-                {m.role === 'assistant' && !m.streaming && !m.error && entities.length
-                  ? splitByEntities(m.content, entities).map((part, k) =>
-                      part.entity ? (
-                        <button
-                          key={k}
-                          type="button"
-                          className="ask-entitylink"
-                          title={`${part.entity.name} — 지도에서 보기`}
-                          onClick={() => goToEntity(part.entity)}
-                        >
-                          {part.text}
-                        </button>
-                      ) : (
-                        <span key={k}>{part.text}</span>
-                      ),
-                    )
-                  : m.content}
+                {m.content}
               </p>
             )}
             {m.role === 'assistant' && Array.isArray(m.excerpts) && m.excerpts.length > 0 && (

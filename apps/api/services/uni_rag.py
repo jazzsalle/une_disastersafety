@@ -436,7 +436,10 @@ def _query_with_excerpts(query: str, excerpts: list[dict]) -> str:
     """로컬 코퍼스 발췌를 질의 뒤에 참고자료로 덧붙인다(에이전트 근거 유도)."""
     if not excerpts:
         return query
-    lines = ["[참고 문서 발췌 — 아래 내용을 근거로 답하고, 근거가 없으면 모른다고 답할 것]"]
+    lines = [
+        "[참고 문서 발췌 — 아래 내용을 근거로 답하고, 근거가 없으면 모른다고 답할 것. "
+        "수치 비교·목록형 내용은 마크다운 표(|헤더|)로 정리할 것]"
+    ]
     for i, ex in enumerate(excerpts, 1):
         loc_bits = [str(ex.get("doc_title") or "")]
         if ex.get("chapter"):

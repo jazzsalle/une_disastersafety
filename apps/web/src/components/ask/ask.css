@@ -107,6 +107,40 @@
   color: var(--color-text-brand, var(--color-light-blue-500));
 }
 
+/* 응답 속 마크다운 표 — DS 토큰 기반(라이트/다크 자동) */
+.ask-md-tablewrap {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+}
+
+.ask-md-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: max-content;
+  background: var(--color-surface-primary);
+  color: var(--color-text-primary);
+}
+
+.ask-md-table th {
+  background: var(--color-surface-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ask-md-table th,
+.ask-md-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--color-border-muted);
+  vertical-align: top;
+}
+
+.ask-md-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 /* 응답 속 지명 링크 — 클릭 시 지도 이동·상세조회 */
 .ask-entitylink {
   display: inline;

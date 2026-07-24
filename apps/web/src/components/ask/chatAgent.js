@@ -81,6 +81,82 @@ export function splitByEntities(text, entities = []) {
   return parts;
 }
 
+// ── 마크다운 표 파서 (GFM 표 블록만 — 외부 라이브러리 없이) ──────────
+
+const TABLE_ROW = /^\s*\|.*\|\s*$/;
+const TABLE_SEPARATOR = /^\s*\|(\s*:?-{3,}:?\s*\|)+\s*$/;
+
+/** 표 행 1줄 → 셀 배열 (이스케이프 \| 보존) */
+function splitCells(row) {
+  const cells = [];
+  let cur = '';
+  const inner = row.trim().replace(/^\|/, '').replace(/\|$/, '');
+  for (let i = 0; i < inner.length; i += 1) {
+    if (inner[i] === '\\' && inner[i + 1] === '|') {
+      cur += '|';
+      i += 1;
+    } else if (inner[i] === '|') {
+      cells.push(cur.trim());
+      cur = '';
+    } else {
+      cur += inner[i];
+    }
+  }
+  cells.push(cur.trim());
+  return cells;
+}
+
+function cellAlign(sep) {
+  const s = sep.trim();
+  if (s.startsWith(':') && s.endsWith(':')) return 'center';
+  if (s.endsWith(':')) return 'right';
+  return 'left';
+}
+
+/**
+ * 텍스트를 마크다운 표 기준으로 분할 —
+ * [{type:'text', text} | {type:'table', header:[], align:[], rows:[][]}] 순서 보존.
+ * 표 블록 = `|…|` 행 + 둘째 행이 구분행(|---|)인 연속 구간.
+ */
+export function splitMarkdownTables(text) {
+  const lines = String(text || '').split('\n');
+  const segments = [];
+  let textBuf = [];
+  const flushText = () => {
+    const t = textBuf.join('\n');
+    if (t.trim()) segments.push({ type: 'text', text: t });
+    textBuf = [];
+  };
+  let i = 0;
+  while (i < lines.length) {
+    if (
+      TABLE_ROW.test(lines[i]) &&
+      i + 1 < lines.length &&
+      TABLE_SEPARATOR.test(lines[i + 1])
+    ) {
+      const header = splitCells(lines[i]);
+      const align = splitCells(lines[i + 1]).map(cellAlign);
+      const rows = [];
+      let j = i + 2;
+      while (j < lines.length && TABLE_ROW.test(lines[j]) && !TABLE_SEPARATOR.test(lines[j])) {
+        const cells = splitCells(lines[j]);
+        // 셀 수 불일치 — 헤더 기준 패딩/절삭(모델 출력 편차 방어)
+        while (cells.length < header.length) cells.push('');
+        rows.push(cells.slice(0, header.length));
+        j += 1;
+      }
+      flushText();
+      segments.push({ type: 'table', header, align, rows });
+      i = j;
+    } else {
+      textBuf.push(lines[i]);
+      i += 1;
+    }
+  }
+  flushText();
+  return segments.length ? segments : [{ type: 'text', text: String(text || '') }];
+}
+
 /** 맥락 후속 질문 제안 — POI 선택 시 맞춤, 응답 후 일반 */
 export function suggestionsFor(entity, hasResponse) {
   if (entity?.type === 'district') {
