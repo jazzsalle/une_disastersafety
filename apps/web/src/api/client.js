@@ -287,24 +287,31 @@ export async function chat({
     // event:·id:·retry:·주석(:)은 무시
   };
 
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let nl;
-    while ((nl = buffer.indexOf('\n')) >= 0) {
-      consumeLine(buffer.slice(0, nl));
-      buffer = buffer.slice(nl + 1);
-    }
-    if (finished) break;
-  }
-  buffer += decoder.decode(); // 잔여 바이트 플러시
-  if (buffer) consumeLine(buffer);
-  flushEvent();
   try {
-    reader.releaseLock();
-  } catch {
-    // 이미 해제된 경우 무시
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = buffer.indexOf('\n')) >= 0) {
+        consumeLine(buffer.slice(0, nl));
+        buffer = buffer.slice(nl + 1);
+      }
+      if (finished) break;
+    }
+    buffer += decoder.decode(); // 잔여 바이트 플러시
+    if (buffer) consumeLine(buffer);
+    flushEvent();
+  } catch (err) {
+    // 스트림 중단(서버리스 시간 한도·네트워크 단절 등) — 이미 실답변을 받았다면
+    // 부분 응답으로 마무리, 살릴 내용이 없으면 기존 오류 처리로 전파
+    if (!(thinkDone && fullText)) throw err;
+  } finally {
+    try {
+      reader.releaseLock();
+    } catch {
+      // 이미 해제된 경우 무시
+    }
   }
 
   if (!thinkDone && !fullText && rawText) {

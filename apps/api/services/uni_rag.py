@@ -29,8 +29,11 @@ logger = logging.getLogger("disaster.api.uni_rag")
 DEFAULT_BASE_URL = "http://221.147.100.161:8000"
 MOCK_NOTICE = "UNI RAG 미연결 mock 응답"
 
-# 연결은 짧게(5s) — 실패 시 조용히 mock 폴백. 스트리밍 read는 여유(60s).
-_TIMEOUT = httpx.Timeout(connect=5.0, read=60.0, write=10.0, pool=5.0)
+# 연결은 짧게(5s) — 실패 시 조용히 mock 폴백.
+# read(첫 이벤트·청크 간 대기)는 25s: 모델 서버 미가동 시 상류가 오류 이벤트까지
+# 10초대를 끄는데, 60s로 두면 서버리스(Vercel maxDuration) 한도를 넘겨 504가 난다.
+# 정상 스트림은 청크 간격이 짧아 25s로 충분.
+_TIMEOUT = httpx.Timeout(connect=5.0, read=25.0, write=10.0, pool=5.0)
 
 _TOKEN_SPLIT = re.compile(r"[\s,;·/]+")
 
