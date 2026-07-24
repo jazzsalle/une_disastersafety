@@ -1,7 +1,28 @@
 # PROGRESS
 
 ## Last updated
-2026-07-24 (챗봇 안정화·표 렌더링)
+2026-07-24 저녁 (회사 PC 세션 종료 — 집 PC 인계)
+
+## 집 PC 인계 사항 (2026-07-24 저녁)
+1. **git pull 주의**: 이번에 `data/processed/` 런타임 5종(chunks.jsonl 등)이 커밋 대상이 됨 —
+   집 PC에 같은 경로의 로컬 산출물이 있으면 pull이 거부될 수 있음. 그 경우
+   `data/processed/chunks.jsonl·criteria.json·districts.json·rivers.json·geo.json` 5개를 지우고
+   pull(커밋본과 동일 내용이라 안전). `report.md`·`extracted/` 등 나머지는 그대로 둬도 됨
+2. **.env 갱신 필요**: 집 PC .env에 `UNI_RAG_MODEL_KEY=qwen3.5-397b` 추가
+   (기존 3종 모델 미가동 — 신규 397b만 가동 중, 기본 모델 경로는 무응답 행)
+3. **Vercel**: GitHub master push → 자동 배포 정상 동작 확인됨. CLI 배포·env 관리가 필요하면
+   집 PC에서 `npx vercel login` 별도 필요. 대시보드 Production Branch가 master인지 확인 권장
+4. 회사 PC `outputs/`(오류 캡처 2장)는 리포 미포함 — 분석 완료된 자료
+
+## Next steps
+1. 브라우저 데모 리허설: 배포 URL 로그인 → docs/04 §8 A1~A3 시나리오 (챗봇 표 질의 포함 —
+   "요천의 산정지점별 계획홍수량을 표로 정리해줘")
+2. VWorld 키 등록 도메인에 `une-disastersafety.vercel.app` 추가 여부 확인(지도 타일)
+3. 하천 형상 정밀화(선택): 공공데이터포털 'RIMGIS 하천관리지리정보 WFS' 활용신청 검토 —
+   승인 시 fetch_geo 소스 체인 최상위에 추가
+4. UNI RAG 모델 상태 변동 잦음 — 시연 직전 `/models/` 가용성 확인 습관화
+
+## 2026-07-24 작업
 
 ## 2026-07-24 작업
 - **챗봇 504 해소**: UNI RAG 모델 미가동 시 상류 지연(10s+)+대기 60s가 Vercel 함수 한도 초과
