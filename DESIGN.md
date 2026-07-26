@@ -144,6 +144,7 @@ T3Q RAG API 연계 구조(사업수행계획서 4.2(7))의 "질의 구조화 →
 | GET `/api/rivers?admin=` | 하천 제원·계획홍수량·특보 기준유량 | rivers.json |
 | GET `/api/geo?admin=&layer=` | 지도 레이어(경계·지구 마커·하천 구간) | GeoJSON (L1~L3) |
 | POST `/api/search` | {event, query, top_k} → 메타 필터+BM25 검색 | results[]: {passage, score, similarity_factors, source} |
+| POST `/api/cases/search` | {event, top_k} → **유사 재난 사례 검색(사례 단위·전 지자체)** — districts(관리대장 정형+damage_events 피해이력)에서 유형 일치 사례를 랭킹, admin은 필터가 아닌 표시 요인 | cases[]: {district_*, disaster_type, damage_events[](occurred·description·evidence), score, similarity_factors, evidence}, total_candidates |
 | POST `/api/ask` | {event, query} → 검색 후 근거 기반 응답 생성 | rag_answer_id, answer, top_k_results[](유사도 점수 포함), citations[], structured_refs(지구·하천·기준), geo_refs(GeoJSON) |
 | POST `/api/chat` | {query, history[], event?} → **UNI RAG main chat API 서버사이드 프록시**(SSE 중계) | SSE 스트림(또는 mock JSON). 자격증명·JWT는 백엔드 전용 — 프론트 미노출 |
 

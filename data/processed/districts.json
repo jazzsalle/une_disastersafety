@@ -1,9 +1,10 @@
 {
   "dataset": "districts",
-  "version": "0.1",
-  "updated": "2026-07-23",
-  "description": "위험지구 정형 시드 — 의왕 17개소 전체, 구미·남원 대표 지구. 원문(관리대장·주요현황 서식)에서 판독한 값만 기입, 미기재·판독 불가 항목은 null.",
+  "version": "0.2",
+  "updated": "2026-07-27",
+  "description": "위험지구 정형 시드 — 의왕 17개소 전체, 구미·남원 대표 지구. 원문(관리대장·주요현황 서식)에서 판독한 값만 기입, 미기재·판독 불가 항목은 null. v0.2: 유사 재난 사례 검색용 damage_events(구조화 피해이력) 추가 — 코퍼스 실기록(저감계획 재해발생현황 장·관리대장) 근거 한정.",
   "schema_note": {
+    "damage_events": "구조화 피해이력 배열(유사 재난 사례 검색용) — occurred(YYYY-MM), event_name(사건명), hazard_codes(관련 T코드), description(원문 기반 피해·기록 서술), evidence(doc_title·page 필수, passage_id는 코퍼스 청크 대응 시). 원문에 기록된 사건만 기입 — 추정·가상 사례 금지",
     "risk_thresholds": "위험조건 임계값 구조체(target 대상, operator 비교연산, value 값, unit 단위, basis 산정 근거). operator '부족(최대)'=계획빈도 기준 최대 부족량, '<'=기준 대비 미달(음수=부족), '='=평가·산정값, '부족'/'위험'/'해당'=원문 서술형(수치 미기재 시 value=null)",
     "hazard_codes": "하천재해→[T10206,T10107], 내수재해→[T10107,T10106], 사면·토사재해→[T10401], 바람재해→[T10105], 대설재해→[](대상 재난 5종 외)",
     "cost_million_krw": "사업비(백만원)",
@@ -115,6 +116,23 @@
       "cost_million_krw": 26513,
       "expected_damage_million_krw": null,
       "damage_history": null,
+      "damage_events": [
+        {
+          "occurred": "2010-09",
+          "event_name": "태풍 곤파스",
+          "hazard_codes": [
+            "T10105",
+            "T10206"
+          ],
+          "description": "2010년 태풍 곤파스 시 안양천 충훈1교 관측 최고수위 EL.17.09m 기록 — 200년빈도 계획홍수위 대비 분석 대상이 된 주요 홍수 사상",
+          "evidence": {
+            "doc_title": "제2차 의왕시 자연재해저감 종합계획(2022.7)",
+            "chapter": "제2장 2.3.3 주요자연재해특성분석",
+            "page": 98,
+            "passage_id": "PSG-UW-JGP-2-0098-01"
+          }
+        }
+      ],
       "priority": "전체 1/17위(하천재해 1/9위)",
       "implementer": "경기도(하천과)",
       "related_ministry": "환경부",
@@ -193,6 +211,23 @@
       "cost_million_krw": 31196,
       "expected_damage_million_krw": null,
       "damage_history": "'09년 7월 집중호우시 하천급류로 인한 피해발생",
+      "damage_events": [
+        {
+          "occurred": "2009-07",
+          "event_name": "집중호우",
+          "hazard_codes": [
+            "T10107",
+            "T10206"
+          ],
+          "description": "2009년 7월 집중호우 시 하천급류로 인한 피해 발생(관리대장 피해이력). 위험지구 후보지 위험요인 분석표 피해이력(A) 3점 — 최근 10년내 피해이력 있음",
+          "evidence": {
+            "doc_title": "제2차 의왕시 자연재해저감 종합계획 위험지구 후보지 위험요인 분석표",
+            "chapter": "오전천지구",
+            "page": 3,
+            "passage_id": "PSG-UW-JGP-E-0003-01"
+          }
+        }
+      ],
       "priority": "전체 14/17위(하천재해 7/9위)",
       "implementer": "경기도(하천과)",
       "related_ministry": "환경부",
@@ -846,6 +881,22 @@
       "cost_million_krw": 4070,
       "expected_damage_million_krw": null,
       "damage_history": "'09년 7월 집중호우시 내손동 일대 주택 침수피해 발생",
+      "damage_events": [
+        {
+          "occurred": "2009-07",
+          "event_name": "집중호우",
+          "hazard_codes": [
+            "T10107",
+            "T10106"
+          ],
+          "description": "2009년 7월 집중호우 시 내손동 일대 주택 침수피해 발생(관리대장 피해이력)",
+          "evidence": {
+            "doc_title": "제2차 의왕시 자연재해저감 종합계획 관리대장(2022.7)",
+            "chapter": "내손A지구(B-02)",
+            "page": 11
+          }
+        }
+      ],
       "priority": "전체 6/17위(내수재해 2/3위)",
       "implementer": "의왕시(상하수과)",
       "related_ministry": "환경부",
@@ -900,6 +951,36 @@
       "cost_million_krw": 3836,
       "expected_damage_million_krw": null,
       "damage_history": "'16년 7월·'17년 7월 집중호우시 고천동 300-4 일대 주택 침수피해 발생",
+      "damage_events": [
+        {
+          "occurred": "2016-07",
+          "event_name": "집중호우",
+          "hazard_codes": [
+            "T10107",
+            "T10106"
+          ],
+          "description": "2016년 7월 집중호우 시 고천동 300-4 일대 주택 침수피해 발생(관리대장 피해이력)",
+          "evidence": {
+            "doc_title": "제2차 의왕시 자연재해저감 종합계획 관리대장(2022.7)",
+            "chapter": "오전B지구(B-03)",
+            "page": 12
+          }
+        },
+        {
+          "occurred": "2017-07",
+          "event_name": "집중호우",
+          "hazard_codes": [
+            "T10107",
+            "T10106"
+          ],
+          "description": "2017년 7월 집중호우 시 고천동 300-4 일대 주택 침수피해 발생(관리대장 피해이력)",
+          "evidence": {
+            "doc_title": "제2차 의왕시 자연재해저감 종합계획 관리대장(2022.7)",
+            "chapter": "오전B지구(B-03)",
+            "page": 12
+          }
+        }
+      ],
       "priority": "전체 5/17위(내수재해 1/3위)",
       "implementer": "의왕시(상하수과)",
       "related_ministry": "환경부",
@@ -1325,6 +1406,24 @@
       "cost_million_krw": 30992,
       "expected_damage_million_krw": 74491,
       "damage_history": null,
+      "damage_events": [
+        {
+          "occurred": "2012-09",
+          "event_name": "태풍 산바",
+          "hazard_codes": [
+            "T10105",
+            "T10206",
+            "T10107"
+          ],
+          "description": "2012년 9월 15~17일 태풍 산바 — 구미시 이재민 147명·재산피해액 약 82억원(최근 10년 최대 규모), 선주교 관측소 수위·환산홍수량 급상승 기록",
+          "evidence": {
+            "doc_title": "제2차 구미시 자연재해저감종합계획(2021.9)",
+            "chapter": "제2장 2.7.2 계획 수립 중점방향",
+            "page": 705,
+            "passage_id": "PSG-GM-JGP-2-0705-01"
+          }
+        }
+      ],
       "priority": "전체 3/65위",
       "implementer": "구미시(안전재난과)",
       "related_ministry": "행정안전부",
@@ -1622,6 +1721,23 @@
       "cost_million_krw": 19576,
       "expected_damage_million_krw": null,
       "damage_history": null,
+      "damage_events": [
+        {
+          "occurred": "2020-08",
+          "event_name": "집중호우",
+          "hazard_codes": [
+            "T10107",
+            "T10206"
+          ],
+          "description": "2020년 8월 7~9일 집중호우 — 남원시 평균 411.1mm(대강면 누적 534mm·금지면 500mm)의 기록적 강우, 관내 하천 수계 침수피해 및 개선복구 계획 수립",
+          "evidence": {
+            "doc_title": "제2차 남원시 자연재해저감 종합계획(2022.4)",
+            "chapter": "제2장 2.3.2 주요 자연재해 특성 분석",
+            "page": 121,
+            "passage_id": "PSG-NW-JGP-2-0121-01"
+          }
+        }
+      ],
       "priority": "전체 5/137위",
       "implementer": "전라북도(공항하천과)",
       "related_ministry": null,
@@ -1672,6 +1788,38 @@
       "cost_million_krw": 33221,
       "expected_damage_million_krw": null,
       "damage_history": null,
+      "damage_events": [
+        {
+          "occurred": "2020-08",
+          "event_name": "집중호우",
+          "hazard_codes": [
+            "T10107",
+            "T10206"
+          ],
+          "description": "2020년 8월 7~9일 집중호우 — 남원시 평균 411.1mm의 기록적 강우, 요천 합류부 침수피해 저감을 위한 개선복구·유로변경 등 복구계획 서술",
+          "evidence": {
+            "doc_title": "제2차 남원시 자연재해저감 종합계획(2022.4)",
+            "chapter": "제2장 2.3.2 주요 자연재해 특성 분석",
+            "page": 120,
+            "passage_id": "PSG-NW-JGP-2-0120-01"
+          }
+        },
+        {
+          "occurred": "2010-08",
+          "event_name": "집중호우(홍수)",
+          "hazard_codes": [
+            "T10206",
+            "T10107"
+          ],
+          "description": "2010년 8월 12~18일 홍수 — 남원관측소 1시간 최대 58mm(20년빈도 상당) 기록, 요천 수계 홍수분석 대상 사상",
+          "evidence": {
+            "doc_title": "요천권역(국가하천) 하천기본계획(변경)(2021)",
+            "chapter": "제2장 2.3.3 홍수피해현황 및 취약지역",
+            "page": 97,
+            "passage_id": "PSG-YC-RVP-2-0097-01"
+          }
+        }
+      ],
       "priority": "전체 20/137위",
       "implementer": "전라북도(공항하천과)",
       "related_ministry": null,

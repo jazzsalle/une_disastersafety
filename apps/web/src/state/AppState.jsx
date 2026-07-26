@@ -50,6 +50,7 @@ export const initialState = {
   selectedPassageId: null,
   selectedDistrictId: null,
   selectedRiverId: null,
+  caseList: null,
   rightTab: 'topk',
   mapHighlight: null,
   chatMessages: [],
@@ -63,6 +64,7 @@ export const ActionTypes = {
   TOGGLE_THEME: 'TOGGLE_THEME',
   SET_ADMIN_CODE: 'SET_ADMIN_CODE',
   SET_EVENT: 'SET_EVENT',
+  SET_CASES: 'SET_CASES',
   ASK_START: 'ASK_START',
   ASK_SUCCESS: 'ASK_SUCCESS',
   ASK_ERROR: 'ASK_ERROR',
@@ -98,6 +100,9 @@ export function reducer(state, action) {
       };
     case ActionTypes.SET_EVENT:
       return { ...state, event: action.event };
+    case ActionTypes.SET_CASES:
+      // 유사 재난 사례(전 지자체) — 상황 적용 시 갱신, 지자체 전환에도 유지
+      return { ...state, caseList: action.cases || null };
     case ActionTypes.ASK_START:
       return { ...state, askLoading: true };
     case ActionTypes.ASK_SUCCESS:
@@ -166,8 +171,11 @@ export const selectHazard = (state) =>
 /** 현재 adminCode의 지자체 항목({admin_code, admin_name, short_name}) | undefined */
 export const selectRegion = (state) => findRegion(state.adminCode);
 
-/** ask 응답의 유사사례 Top-K 결과 배열(없으면 []) */
+/** ask 응답의 근거 발췌 Top-K 결과 배열(없으면 []) */
 export const selectTopKResults = (state) => state.askResponse?.top_k_results ?? [];
+
+/** 유사 재난 사례 목록(/api/cases/search — 없으면 []) */
+export const selectCases = (state) => state.caseList?.cases ?? [];
 
 /** ask 응답의 citations 배열(없으면 []) */
 export const selectCitations = (state) => state.askResponse?.citations ?? [];
@@ -205,6 +213,7 @@ export function AppStateProvider({ children }) {
       setAdminCode: (adminCode) =>
         dispatch({ type: ActionTypes.SET_ADMIN_CODE, adminCode }),
       setEvent: (event) => dispatch({ type: ActionTypes.SET_EVENT, event }),
+      setCases: (cases) => dispatch({ type: ActionTypes.SET_CASES, cases }),
       askStart: () => dispatch({ type: ActionTypes.ASK_START }),
       askSuccess: (response) =>
         dispatch({ type: ActionTypes.ASK_SUCCESS, response }),

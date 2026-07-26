@@ -14,9 +14,40 @@
    집 PC에서 `npx vercel login` 별도 필요. 대시보드 Production Branch가 master인지 확인 권장
 4. 회사 PC `outputs/`(오류 캡처 2장)는 리포 미포함 — 분석 완료된 자료
 
+## 집 PC 리허설 (2026-07-26 — 헤드리스 API 검증 완료)
+- 배포 URL 대상 `verify_scenarios.py --base-url` 실행: S1 17/17·S2 18/18·S3 15/15,
+  체크리스트 8/8 전부 PASS (배포 서버리스 환경에서 재확인)
+- 로그인 게이트: `/api/auth/login` 200 + `uni_rag_token` httpOnly 쿠키, `/auth/me` logged_in=true
+- **UNI RAG 실연동 확인**: `/models/` — qwen3.5-397b **available:true**(나머지 3종 false).
+  챗봇 표 질의("요천의 산정지점별 계획홍수량을 표로 정리해줘", POI RIV-YC) →
+  **X-Chat-Mode=uni_rag**(mock 아님), 로컬 근거 발췌 3건, thinking 노출 없음,
+  GFM 표(빈도별 수치) 정상 응답. 소요 약 41초 — 시연 시 대기 안내 멘트 필요
+- VWorld 타일: Referer=`une-disastersafety.vercel.app` 으로 WMTS 200(39KB PNG) — 배포 도메인에서 지도 타일 정상
+- 잔여: 브라우저 UI 인터랙션(POI 클릭·지명 링크·자연어 지도 제어·로그아웃 등 A1~A3 클릭 절차)은
+  화면에서 직접 확인 필요 — 아래 Next steps 1
+
+## 2026-07-27 작업 — 시연 스크립트 + 유사사례 사례 단위 검색 전환
+- **docs/07_시연스크립트_남원.md 신규**: 남원 1곳·홍수 단일 서사(로그인→상황입력→판단기준→
+  지도·상세조회→근거응답·사례→챗봇→로그아웃), 장면별 마우스 액션·발화체 멘트·Q&A 5종·체크리스트.
+  UI 문구는 프론트 코드 실라벨 대조(레이어 토글·범례는 화면에 없음 — 스크립트에 금지 명시)
+- **유사사례 개념 결함 확정(사용자 지적 → 코드 검증)**: 기존 Top-K는 동일 지자체 청크
+  BM25 순위(retrieval.py admin 하드 필터) — 설계 원안 "매칭 사건 리스트"에서 축소된 구현
+- **사례 단위 검색 구현**:
+  - 시드: districts.json v0.2 — damage_events(구조화 피해이력) 7지구 9건, **전건 코퍼스
+    실기록 근거**(의왕 2009 호우·2010 곤파스 / 구미 2012 태풍 산바 / 남원 2020·2010 집중호우,
+    doc·page·passage_id 부착, 가상 사례 없음). build_structured.py에 근거 필수 검증 추가
+  - 백엔드: services/cases.py + POST /api/cases/search — **admin 하드 필터 없음**(타 지자체
+    포함이 계약), 요인 4종 재정의(type=유형 일치 필수·time=계절 근접·space=표시용·damage=키워드),
+    ask/search 계약 무변경. pytest 97건(신규 6) 통과
+  - 프론트: 유사사례 탭 2섹션(「유사 재난 사례」 카드+상세 Modal+지도에서 보기(타 지자체 전환),
+    「근거 문서 발췌」=기존 Top-K), 상황 적용 시 사례 자동 조회. npm run build 통과
+  - 데모 확인: 남원 홍수(8월·제방/월류) → top5 = 구미천지구(산바)·안양천/오전천지구(의왕)·
+    주촌/요천지구(남원) — 교차 지자체 혼합 랭킹 동작
+
 ## Next steps
-1. 브라우저 데모 리허설: 배포 URL 로그인 → docs/04 §8 A1~A3 시나리오 (챗봇 표 질의 포함 —
-   "요천의 산정지점별 계획홍수량을 표로 정리해줘")
+1. 브라우저 데모 리허설(잔여 UI 부분): 배포 URL 로그인 → **docs/07 남원 단일 시나리오**
+   (docs/04 §8은 상세 검증용) — 유사 재난 사례 카드·타 지자체 전환 포함
+2. 커밋·push 후 Vercel 자동 배포 확인(런타임 데이터 districts.json 갱신 포함)
 2. VWorld 키 등록 도메인에 `une-disastersafety.vercel.app` 추가 여부 확인(지도 타일)
 3. 하천 형상 정밀화(선택): 공공데이터포털 'RIMGIS 하천관리지리정보 WFS' 활용신청 검토 —
    승인 시 fetch_geo 소스 체인 최상위에 추가

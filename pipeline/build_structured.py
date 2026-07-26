@@ -162,6 +162,26 @@ def validate_districts(data: Any, errors: list[ValidationError]) -> dict[str, An
                 fname, rec_id, "evidence.pdf_page",
                 "페이지 정보(pdf_page·page_label) 누락"))
 
+        # damage_events(v0.2 유사 재난 사례용) — 있으면 사건별 필수 필드·근거 검증
+        events = rec.get("damage_events")
+        if events is not None:
+            if not isinstance(events, list):
+                errors.append(ValidationError(
+                    fname, rec_id, "damage_events", "damage_events는 배열이어야 함"))
+            else:
+                for j, ev in enumerate(events):
+                    ev_field = f"damage_events[{j}]"
+                    for req in ("occurred", "event_name", "description"):
+                        if not ev.get(req):
+                            errors.append(ValidationError(
+                                fname, rec_id, f"{ev_field}.{req}", f"{req} 누락"))
+                    ev_evidence = ev.get("evidence")
+                    if not isinstance(ev_evidence, dict) or not ev_evidence.get("doc_title") \
+                            or ev_evidence.get("page") is None:
+                        errors.append(ValidationError(
+                            fname, rec_id, f"{ev_field}.evidence",
+                            "evidence(doc_title·page) 누락 — 근거 없는 피해이력 금지"))
+
     summary["by_admin"] = by_admin
     uiwang = by_admin.get(UIWANG_ADMIN_CODE, 0)
     if uiwang != UIWANG_EXPECTED_COUNT:

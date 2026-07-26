@@ -139,6 +139,16 @@ export function search({ event = {}, query, top_k = 5 }) {
 }
 
 /**
+ * POST /api/cases/search — 유사 재난 사례 검색(사례 단위·전 지자체, admin 필터 없음).
+ * @returns {Promise<{cases: Array<{case_id:string, district_name:string, admin_code:string,
+ *   admin_name:string, disaster_type:string, damage_events:Array, score:number,
+ *   similarity_factors:Object, evidence:Object}>, total_candidates:number}>}
+ */
+export function searchCases({ event = {}, top_k = 5 } = {}) {
+  return postJson('/cases/search', { event, top_k });
+}
+
+/**
  * POST /api/ask — 근거 기반 RAG 응답.
  * @returns {Promise<{rag_answer_id:string, answer:string, mode:string, no_evidence:boolean,
  *   top_k_results:Array, citations:Array, structured_refs:{districts:Array,rivers:Array,criteria:Array},
