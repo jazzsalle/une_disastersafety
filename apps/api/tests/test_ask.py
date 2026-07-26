@@ -116,6 +116,30 @@ def test_mock_answer_cites_source_pages(client):
     assert "《" in body["answer"], "출처 문서명 병기 필요"
 
 
+# ── 표 데이터 표출 — PDF 표 세로 나열 방지(근거응답 개선사항 캡처) ──
+def test_mock_answer_includes_markdown_table_for_river_query(client):
+    """상위 청크에 원문 표가 있으면 mock 답변에 GFM 표가 포함된다."""
+    body = _post(client, "요천 산정지점별 계획홍수량", "T10206", "45190").json()
+    answer = body["answer"]
+    assert "원문 표" in answer, "표 보유 청크가 상위인데 표 블록 없음"
+    table_lines = [ln for ln in answer.split("\n") if ln.startswith("|")]
+    assert len(table_lines) >= 3, "GFM 표(헤더+구분+본문) 형식이어야 함"
+    assert any("---" in ln for ln in table_lines)
+
+
+def test_citations_carry_structured_tables(client):
+    """표 보유 청크의 citation에는 구조화 tables(caption·rows)가 실린다."""
+    body = _post(client, "요천 산정지점별 계획홍수량", "T10206", "45190").json()
+    assert all("tables" in c for c in body["citations"])
+    tabled = [c for c in body["citations"] if c["tables"]]
+    assert tabled, "표 보유 청크 citation이 최소 1건 있어야 함"
+    t = tabled[0]["tables"][0]
+    assert isinstance(t["rows"], list) and len(t["rows"]) >= 2
+    assert len(t["rows"][0]) >= 2
+    # 셀 정규화 — 개행 제거(세로 나열 원인 차단)
+    assert all("\n" not in cell for row in t["rows"] for cell in row)
+
+
 # ── structured_refs·geo_refs 필터 ──
 @pytest.mark.parametrize("query,hazard_code,admin_code", SCENARIOS)
 def test_structured_refs_filtered(client, query, hazard_code, admin_code):

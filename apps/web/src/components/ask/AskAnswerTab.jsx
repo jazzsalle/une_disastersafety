@@ -26,6 +26,7 @@ import Spinner from '../../ds/components/feedback/Spinner.jsx';
 import Tooltip from '../../ds/components/feedback/Tooltip.jsx';
 import FactorBars from './FactorBars.jsx';
 import CitationModal from './CitationModal.jsx';
+import MarkdownAnswer from './MarkdownAnswer.jsx';
 import { citeLoc, truncate } from './askUtils.js';
 
 /** 빈 상태 예시 질의 3종 — 클릭 시 입력 채움 */
@@ -221,7 +222,7 @@ export default function AskAnswerTab() {
                 </div>
               )}
 
-              <p className="ask-answer-text typo-body-md">{res.answer}</p>
+              <MarkdownAnswer text={res.answer} />
             </div>
 
             {/* ⑤ 정합성 — Citation */}

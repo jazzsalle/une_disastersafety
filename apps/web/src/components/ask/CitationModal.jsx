@@ -1,57 +1,65 @@
 /**
- * CitationModal — Citation 클릭 시 인용 전문+출처 표시(DS Modal 사용).
- * 배경 클릭·ESC·닫기 버튼으로 닫음. citation이 null이면 렌더하지 않음.
+ * CitationModal — Citation 클릭 시 인용 전문+출처 표시.
+ *
+ * DetailModal(비모달 플로팅 창 — 드래그 이동·X 닫기)을 사용해 창을 띄운 채
+ * 지도 하이라이트를 볼 수 있다. 인용 청크에 원문 표(citation.tables —
+ * pdfplumber 구조화)가 있으면 실제 표로 렌더한다(본문 텍스트의 세로 나열 보완).
  */
-import { useEffect } from 'react';
-import Modal from '../../ds/components/overlay/Modal.jsx';
-import Button from '../../ds/components/actions/Button.jsx';
+import { DetailModal, FieldRow, KTable, SectionTitle } from '../right/shared.jsx';
 import { citeLoc } from './askUtils.js';
 
-export default function CitationModal({ citation, onClose }) {
-  useEffect(() => {
-    if (!citation) return undefined;
-    const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [citation, onClose]);
+/** 원문 표 rows[][] → KTable 계약({key,label} 컬럼 + key 접근 행) 변환 */
+function toKTable(rows) {
+  const columns = rows[0].map((label, i) => ({ key: `c${i}`, label: label || ' ' }));
+  const body = rows.slice(1).map((r) =>
+    Object.fromEntries(columns.map((c, i) => [c.key, r[i] || '—'])),
+  );
+  return { columns, body };
+}
 
+export default function CitationModal({ citation, onClose }) {
   if (!citation) return null;
 
-  const body =
-    `${citation.quote || '(인용문 없음)'}\n\n` +
-    `출처: ${citeLoc(citation)}\n` +
-    `passage_id: ${citation.passage_id || '-'}`;
+  const tables = (citation.tables || []).filter(
+    (t) => Array.isArray(t?.rows) && t.rows.length >= 2,
+  );
 
   return (
-    <div className="ask-modal-backdrop" onClick={onClose} role="presentation">
-      <div
-        className="ask-modal-box"
-        role="dialog"
-        aria-modal="true"
-        aria-label="근거 인용 전문"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Modal
-          icon={false}
-          iconButton={false}
-          footer={false}
-          title={citation.doc_title || '근거 인용 전문'}
-          text1={body}
-          style={{ width: 'min(640px, 92vw)', maxHeight: '78vh', overflowY: 'auto' }}
-        />
-        <button type="button" className="ask-pressable" onClick={onClose}>
-          <Button
-            label="닫기"
-            variant="outline"
-            color="grayscale"
-            size="md"
-            leftIcon={false}
-            rightIcon={false}
-          />
-        </button>
+    <DetailModal title={citation.doc_title || '근거 인용 전문'} onClose={onClose}>
+      <p className="ask-answer-text typo-body-md">{citation.quote || '(인용문 없음)'}</p>
+
+      {tables.length > 0 && (
+        <>
+          <SectionTitle>원문 표</SectionTitle>
+          {tables.map((t, ti) => {
+            const { columns, body } = toKTable(t.rows);
+            return (
+              <div key={ti} style={{ marginBottom: 10 }}>
+                {t.caption && (
+                  <p
+                    className="typo-body-sm"
+                    style={{ margin: '0 0 4px', color: 'var(--color-text-secondary-2)' }}
+                  >
+                    {t.caption}
+                  </p>
+                )}
+                <KTable columns={columns} rows={body} />
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      <div style={{ marginTop: 12 }}>
+        <FieldRow label="출처">{citeLoc(citation)}</FieldRow>
+        <FieldRow label="식별자">{citation.passage_id || '—'}</FieldRow>
       </div>
-    </div>
+      <p
+        className="typo-body-sm"
+        style={{ margin: '10px 0 0', color: 'var(--color-text-secondary-2)' }}
+      >
+        본 인용은 계획 문서 원문 발췌입니다.
+      </p>
+    </DetailModal>
   );
 }

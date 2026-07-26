@@ -31,7 +31,12 @@ class Event(BaseModel):
 
 
 class Citation(BaseModel):
-    """근거 표기 — 응답·검색 결과의 출처(문서명·장·페이지) 필수 항목."""
+    """근거 표기 — 응답·검색 결과의 출처(문서명·장·페이지) 필수 항목.
+
+    tables: 인용 청크의 원문 표(pdfplumber 추출 — {caption, rows[][]}) 상위 일부.
+    PDF 표가 본문 텍스트로는 세로 나열로 뭉개지므로, 프론트 인용 전문에서
+    구조화 표로 렌더링하기 위한 부가 필드(없으면 빈 목록).
+    """
 
     passage_id: str
     doc_title: str
@@ -39,6 +44,7 @@ class Citation(BaseModel):
     page_start: int | None = None
     page_end: int | None = None
     quote: str | None = None
+    tables: list[dict] = Field(default_factory=list)
 
 
 class SearchResult(BaseModel):

@@ -74,9 +74,20 @@
   보여줘" → 상세조회 재해유형 필터(districtKindFilter 원샷 상태) + 탭 전환. npm run build 통과
 - docs/07 장면 5에 여유 질문 7·8(판단기준 판정·유형 명령) 추가
 
+## 2026-07-27 근거응답 표 표출 — outputs/근거응답 개선사항 캡처 2장 반영
+- 원인: PDF 표가 본문 텍스트 추출에서 셀 세로 나열로 뭉개짐. 청크에 보존된
+  구조화 표(tables — pdfplumber)를 미사용이었음
+- 백엔드(llm.py): mock 답변에 상위 청크 원문 표를 GFM 마크다운 표로 조립,
+  Claude 프롬프트에 (원문 표) 구조 병기 + 표 형식 지시(시스템 프롬프트 6항),
+  citations에 구조화 tables(caption·정규화 rows, 최대 2표·12행) 추가(Citation 스키마 확장)
+- 프론트: MarkdownAnswer.jsx 신규 — 근거응답 답변도 챗봇과 동일한 GFM 표 렌더.
+  CitationModal을 DetailModal(플로팅 창·X 닫기)로 교체 + 원문 표를 KTable로 렌더
+- 챗봇(UNI RAG) 경로는 기존 표 렌더 유지 — 실모델이 표로 답하면 그대로 표출
+- pytest 105건(신규 2)·npm run build 통과
+
 ## Next steps
 1. 브라우저 데모 리허설(잔여 UI 부분): 배포 URL 로그인 → **docs/07 남원 단일 시나리오**
-   — 검색범위 칩·타 지역 배지·플로팅 창·새 탭바/토글·유형 명령·30mm 판정 확인
+   — 근거응답 mock 표·Citation 원문 표 확인 포함
 2. 커밋·push 후 Vercel 자동 배포 확인
 2. VWorld 키 등록 도메인에 `une-disastersafety.vercel.app` 추가 여부 확인(지도 타일)
 3. 하천 형상 정밀화(선택): 공공데이터포털 'RIMGIS 하천관리지리정보 WFS' 활용신청 검토 —

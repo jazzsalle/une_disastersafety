@@ -37,6 +37,8 @@ NO_EVIDENCE_ANSWER = (
 _QUOTE_LEN = 200  # citation 발췌 길이
 _MOCK_TOP = 3  # mock 요약에 조립하는 상위 청크 수
 _CLAUDE_MAX_TOKENS = 1500
+_TABLE_MAX_ROWS = 12  # 표 변환 시 본문 최대 행(초과분은 생략 표기)
+_CITATION_MAX_TABLES = 2  # citation당 포함하는 원문 표 수
 
 # 대상 재난 5종 한국어 명칭(mock 상황 요약용)
 _HAZARD_NAMES = {
@@ -71,8 +73,55 @@ def _source_label(passage: dict) -> str:
     return " · ".join(parts)
 
 
+# ── 원문 표(청크 tables) 헬퍼 ─────────────────────────────────────────
+# PDF 표는 본문 텍스트로는 셀이 세로 나열로 뭉개진다(추출 특성). 청크에 보존된
+# 구조화 표(pdfplumber {caption, rows[][]})를 답변·인용에서 표로 되살린다.
+
+def _chunk_by_id() -> dict[str, dict]:
+    """passage_id → 원본 청크(tables 포함). 검색 결과 passage는 tables가 제거되어
+    있으므로(응답 경량화) 코퍼스에서 재조회한다."""
+    return {c.get("passage_id"): c for c in corpus.get_chunks()}
+
+
+def _clean_cell(value) -> str:
+    """셀 정규화 — 셀 내 개행·연속 공백 제거, 마크다운 파이프 이스케이프."""
+    return " ".join(str(value if value is not None else "").split()).replace("|", "\\|")
+
+
+def _usable_table(table: dict) -> list[list[str]] | None:
+    """렌더 가치가 있는 표만 — 비어있지 않은 행 2개(헤더+본문)·열 2개 이상."""
+    rows = [r for r in (table.get("rows") or []) if any(_clean_cell(c) for c in r)]
+    if len(rows) < 2 or len(rows[0]) < 2:
+        return None
+    return rows
+
+
+def _table_to_markdown(table: dict) -> str | None:
+    """청크 표 → GFM 마크다운 표(캡션 병기, 본문 _TABLE_MAX_ROWS행 제한)."""
+    rows = _usable_table(table)
+    if rows is None:
+        return None
+    header = [_clean_cell(c) or " " for c in rows[0]]
+    lines = []
+    if table.get("caption"):
+        lines.append(str(table["caption"]))
+    lines.append("| " + " | ".join(header) + " |")
+    lines.append("|" + " --- |" * len(header))
+    body = rows[1 : 1 + _TABLE_MAX_ROWS]
+    for r in body:
+        cells = [_clean_cell(c) for c in r]
+        while len(cells) < len(header):
+            cells.append("")
+        lines.append("| " + " | ".join(cells[: len(header)]) + " |")
+    omitted = len(rows) - 1 - len(body)
+    if omitted > 0:
+        lines.append(f"(이하 {omitted}행 생략 — 전체는 출처 페이지 참조)")
+    return "\n".join(lines)
+
+
 def build_citations(search_results: list[SearchResult]) -> list[dict]:
-    """검색 상위 청크 → Citation dict 목록 (quote는 해당 청크 발췌)."""
+    """검색 상위 청크 → Citation dict 목록 (quote 발췌 + 원문 표 구조체)."""
+    chunks = _chunk_by_id()
     citations: list[dict] = []
     for r in search_results:
         p = r.passage
@@ -80,6 +129,19 @@ def build_citations(search_results: list[SearchResult]) -> list[dict]:
         quote = content[:_QUOTE_LEN].rstrip()
         if len(content) > _QUOTE_LEN:
             quote += "…"
+        tables = []
+        for t in (chunks.get(p.get("passage_id")) or {}).get("tables") or []:
+            rows = _usable_table(t)
+            if rows is None:
+                continue
+            tables.append(
+                {
+                    "caption": t.get("caption"),
+                    "rows": [[_clean_cell(c) for c in row] for row in rows[: 1 + _TABLE_MAX_ROWS]],
+                }
+            )
+            if len(tables) >= _CITATION_MAX_TABLES:
+                break
         citations.append(
             {
                 "passage_id": p.get("passage_id") or "",
@@ -88,6 +150,7 @@ def build_citations(search_results: list[SearchResult]) -> list[dict]:
                 "page_start": p.get("page_start"),
                 "page_end": p.get("page_end"),
                 "quote": quote,
+                "tables": tables,
             }
         )
     return citations
@@ -132,6 +195,18 @@ def _mock_answer(event: Event, query: str, search_results: list[SearchResult]) -
         p = r.passage
         excerpt = (p.get("content") or "").strip()[:150].rstrip()
         lines.append(f"{idx}. ({_source_label(p)}) {excerpt}")
+    # 상위 청크에 원문 표가 있으면 첫 표를 마크다운 표로 제시(세로 나열 방지)
+    chunks = _chunk_by_id()
+    for r in search_results[:_MOCK_TOP]:
+        p = r.passage
+        chunk_tables = (chunks.get(p.get("passage_id")) or {}).get("tables") or []
+        md = next((m for m in (_table_to_markdown(t) for t in chunk_tables) if m), None)
+        if md:
+            lines.append("")
+            lines.append(f"원문 표 ({_source_label(p)}):")
+            lines.append("")
+            lines.append(md)
+            break
     lines.append("")
     lines.append(
         f"위 발췌는 검색 상위 {min(len(search_results), _MOCK_TOP)}건이며, "
@@ -148,7 +223,9 @@ _SYSTEM_PROMPT = (
     "2. 모든 수치는 출처(문서명·장·페이지)를 병기한다. 예: (《OO계획》 3장 · 3-12쪽)\n"
     "3. 특보·위기경보 등 판단기준 수치는 [판단기준]에 제공된 값만 사용한다.\n"
     "4. 근거가 부족한 내용은 '근거 없음'이라고 명시하고 추정하지 않는다.\n"
-    "5. 한국어로 간결하게 답한다."
+    "5. 한국어로 간결하게 답한다.\n"
+    "6. 지점별·항목별 수치처럼 표가 적합한 내용은 GFM 마크다운 표(|헤더|…)로 정리한다. "
+    "[근거 청크]의 (원문 표) 블록이 있으면 그 구조를 우선 사용한다."
 )
 
 
@@ -168,13 +245,21 @@ def _build_claude_prompt(event: Event, query: str, search_results: list[SearchRe
                 )
         parts.append("[판단기준] (criteria.json — 기준 수치는 이 값만 사용)\n" + "\n".join(crit_lines))
 
+    chunks = _chunk_by_id()
     chunk_lines = []
     for idx, r in enumerate(search_results, start=1):
         p = r.passage
-        chunk_lines.append(
+        block = (
             f"[{idx}] passage_id={p.get('passage_id')} · 출처: {_source_label(p)}\n"
             f"{(p.get('content') or '').strip()}"
         )
+        # 원문 표(구조화) — 본문 텍스트는 표 셀이 세로 나열로 뭉개져 있으므로 병기
+        chunk_tables = (chunks.get(p.get("passage_id")) or {}).get("tables") or []
+        for t in chunk_tables[:_CITATION_MAX_TABLES]:
+            md = _table_to_markdown(t)
+            if md:
+                block += f"\n(원문 표)\n{md}"
+        chunk_lines.append(block)
     parts.append("[근거 청크] (이 안의 정보만 사용)\n" + "\n\n".join(chunk_lines))
     parts.append(f"[질의]\n{query}")
     return "\n\n".join(parts)
