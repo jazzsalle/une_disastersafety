@@ -170,11 +170,12 @@ export function splitMarkdownTables(text) {
 }
 
 /** 시연 질문 세트 — docs/07 업무 흐름 순서, 전건 실응답 검증(2026-07-27).
- *  1·4·5는 LLM 없이 즉시, 2·3은 실연동(2는 상황 메모 60mm + 판단기준 반영,
- *  3은 요천 POI 컨텍스트의 기준지점·기준유량 주입으로 응답 확인) */
+ *  3번(1100 판단)만 UNI 실연동(지점별 기준유량 대비 판단 표 — 실검증 49초),
+ *  나머지는 지도 명령·정형 데이터 즉답으로 즉시 */
 export const DEMO_QUESTIONS = [
   '요천 보여줘',
-  '지금 어떤 하천이 범람 위험이 있어?',
+  '특보 기준유량은?',
+  '특보 유량이 1100인데 어떤 하천에 주의보를 내려야 하는가?',
   '어떤 수위계를 모니터링해야 해?',
   '저지대 위험지구 보여줘',
   '산사태 위험지구 보여줘',
@@ -242,6 +243,9 @@ const NEED_RIVER = '어느 하천인지 먼저 알려주세요 — 지도에서 
  */
 export function answerFromData(query, poi, districtList = [], riverList = [], adminCode = '') {
   const q = String(query || '');
+  // 판단·발령 질문("유량이 1100인데 어디에 주의보를 내려야?")은 정형 조회가 아니라
+  // 종합 판단 — LLM(UNI) 경로로 보낸다(기준유량 표는 POI 컨텍스트로 주입됨)
+  if (/(내려야|발령해야|발령할|판단해)/.test(q)) return null;
   const district =
     poi?.type === 'district'
       ? districtList.find((d) => d.district_code === poi.id)

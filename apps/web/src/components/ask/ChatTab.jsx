@@ -131,10 +131,20 @@ export default function ChatTab() {
         actions.setAdminCode(cmd.region.admin_code);
         confirm = `${cmd.region.admin_name}로 지도를 이동했습니다.`;
       } else if (cmd.kind === 'kind_filter') {
-        // 재해유형 단위 — 상세조회 탭에 해당 유형 필터 적용(임장 질문 ③④)
+        // 재해유형 단위 — 상세조회 필터 + 지도 이동(첫 해당 지구 하이라이트·panTo)
         actions.setDistrictKindFilter(cmd.disasterKind);
         actions.setRightTab('detail');
-        confirm = `${cmd.disasterKind} 위험지구를 상세조회에 표시했습니다. 지도 마커 색으로도 구분됩니다.`;
+        const matches = rawData.districts.filter(
+          (d) => d.admin_code === state.adminCode && d.disaster_type === cmd.disasterKind,
+        );
+        if (matches.length > 0) {
+          actions.selectDistrict(matches[0].district_code); // mapHighlight → 지도 이동·강조
+          confirm =
+            `${cmd.disasterKind} 위험지구 ${matches.length}개소를 상세조회에 표시하고 ` +
+            `지도를 ${matches[0].district_name} 위치로 이동했습니다.`;
+        } else {
+          confirm = `현재 지자체에 ${cmd.disasterKind} 위험지구가 없습니다.`;
+        }
       } else {
         goToEntity(cmd.entity);
         confirm = `${cmd.entity.name} 위치로 지도를 이동하고 상세조회를 열었습니다.`;
