@@ -139,13 +139,14 @@ export function search({ event = {}, query, top_k = 5 }) {
 }
 
 /**
- * POST /api/cases/search — 유사 재난 사례 검색(사례 단위·전 지자체, admin 필터 없음).
+ * POST /api/cases/search — 유사 재난 사례 검색(사례 단위).
+ * scope: local_first(기본 — 전국 검색+관내 우선) | local(관내) | basin(동일 유역) | national(전국)
  * @returns {Promise<{cases: Array<{case_id:string, district_name:string, admin_code:string,
- *   admin_name:string, disaster_type:string, damage_events:Array, score:number,
- *   similarity_factors:Object, evidence:Object}>, total_candidates:number}>}
+ *   admin_name:string, disaster_type:string, region_relation:string, damage_events:Array,
+ *   score:number, similarity_factors:Object, evidence:Object}>, total_candidates:number, scope:string}>}
  */
-export function searchCases({ event = {}, top_k = 5 } = {}) {
-  return postJson('/cases/search', { event, top_k });
+export function searchCases({ event = {}, top_k = 5, scope = 'local_first' } = {}) {
+  return postJson('/cases/search', { event, top_k, scope });
 }
 
 /**

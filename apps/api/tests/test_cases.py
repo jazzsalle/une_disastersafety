@@ -106,3 +106,44 @@ def test_no_hazard_neutral(client):
     assert body["total_candidates"] == len(corpus.get_districts().get("districts", []))
     for c in body["cases"]:
         assert c["similarity_factors"]["type"] == 0.5
+
+
+# ── 7. 검색범위(scope) — 보완사항 반영 ──
+def test_scope_default_local_first(client):
+    """기본 scope=local_first — 전국 후보 + 관내 우선 노출(상위에 관내 사례)."""
+    res = _post(client, {"event": {"hazard_code": "T10206", "admin_code": "45190"}})
+    body = res.json()
+    assert body["scope"] == "local_first"
+    assert body["cases"][0]["admin_code"] == "45190", "관내 사례가 최상위여야 함"
+    assert body["cases"][0]["region_relation"] == "관내"
+
+
+def test_scope_local_only(client):
+    res = _post(
+        client,
+        {"event": {"hazard_code": "T10206", "admin_code": "45190"}, "scope": "local", "top_k": 20},
+    )
+    body = res.json()
+    assert body["cases"], "관내 사례 존재"
+    assert all(c["admin_code"] == "45190" for c in body["cases"])
+
+
+def test_scope_invalid_rejected(client):
+    res = _post(client, {"event": {}, "scope": "galaxy"})
+    assert res.status_code == 422
+
+
+def test_region_relation_badge(client):
+    """전국 범위에서 타 지자체 사례는 '타 지역' 배지."""
+    res = _post(
+        client,
+        {"event": {"hazard_code": "T10206", "admin_code": "45190"}, "scope": "national", "top_k": 20},
+    )
+    body = res.json()
+    relations = {c["region_relation"] for c in body["cases"]}
+    assert "관내" in relations and "타 지역" in relations
+    for c in body["cases"]:
+        if c["admin_code"] == "45190":
+            assert c["region_relation"] == "관내"
+        else:
+            assert c["region_relation"] in ("동일 유역", "타 지역")

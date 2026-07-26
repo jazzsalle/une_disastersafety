@@ -10,12 +10,13 @@
  *    selectPassage(지도 하이라이트 동기) + 전문 Modal. 유사도 %는 최고 점수 대비
  *    정규화(BM25 결합 점수는 절대 스케일이 아니므로 상대 비율로 표기).
  */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   useAppState,
   selectTopKResults,
   selectCases,
 } from '../../state/AppState.jsx';
+import { searchCases } from '../../api/client.js';
 import Badge from '../../ds/components/display/Badge.jsx';
 import { Button } from '../../ds/components/actions/Button.jsx';
 import {
@@ -25,9 +26,21 @@ import {
   EmptyBox,
   SectionTitle,
   MiniBadge,
+  ChipButton,
   hazardBadgeItems,
   kindBadgeColor,
 } from './shared.jsx';
+
+/** 검색범위 — "유사사례 보완사항": 기본 전국 검색 + 관내 우선 노출 */
+const SCOPES = [
+  { key: 'local_first', label: '관내 우선' },
+  { key: 'local', label: '관내' },
+  { key: 'basin', label: '동일 유역' },
+  { key: 'national', label: '전국' },
+];
+
+/** 지역 관계 배지 색 — 관내(회색)/동일 유역(보조색)/타 지역(브랜드 블루) */
+const RELATION_COLORS = { 관내: 'grayscale', '동일 유역': 'secondary', '타 지역': 'primary' };
 
 /** score → 최고 점수 대비 % (최소 1%) — 근거 발췌(BM25 상대 스케일)용 */
 function scorePct(score, maxScore) {
@@ -58,13 +71,30 @@ export default function TopKPanel() {
   const cases = selectCases(state);
   const [openId, setOpenId] = useState(null);
   const [openCaseId, setOpenCaseId] = useState(null);
+  const [scope, setScope] = useState('local_first');
+
+  // 상황(event)·검색범위 변경 시 유사 재난 사례 재조회 — 실패는 사례 섹션만 비움
+  useEffect(() => {
+    if (!state.event) return;
+    let stale = false;
+    searchCases({ event: state.event, top_k: 5, scope })
+      .then((res) => {
+        if (!stale) actions.setCases(res);
+      })
+      .catch(() => {
+        if (!stale) actions.setCases(null);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [state.event, scope, actions]);
 
   const maxScore = useMemo(
     () => results.reduce((m, r) => Math.max(m, r?.score || 0), 0),
     [results],
   );
 
-  if (cases.length === 0 && (!state.askResponse || results.length === 0)) {
+  if (!state.event && (!state.askResponse || results.length === 0)) {
     return <EmptyBox title="유사사례 없음" desc="상황 적용 후 표시" />;
   }
 
@@ -77,41 +107,58 @@ export default function TopKPanel() {
     setOpenId(passageId);
   };
 
-  // 사례 → 지도·상세조회 — 타 지자체 사례는 지자체 전환 후 선택(ChatTab goToEntity 패턴)
-  const goToCase = (c) => {
+  // 사례 카드 클릭 — 지도 해당 위치로 이동(타 지자체면 전환) + 플로팅 상세 창.
+  // 창은 비모달이라 밑의 지도 하이라이트가 그대로 보인다.
+  const openCaseCard = (c) => {
     if (!c) return;
     if (c.admin_code && c.admin_code !== state.adminCode) {
       actions.setAdminCode(c.admin_code);
     }
-    actions.selectDistrict(c.district_code);
-    actions.setRightTab('detail');
-    setOpenCaseId(null);
+    actions.selectDistrict(c.district_code); // mapHighlight + panTo(MapViewer)
+    setOpenCaseId(c.case_id);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* ── 1. 유사 재난 사례 (사례 단위 · 전 지자체) ── */}
+      {/* ── 1. 유사 재난 사례 (사례 단위 · 검색범위 선택) ── */}
       <SectionTitle>유사 재난 사례</SectionTitle>
-      {cases.length === 0 ? (
+      {!state.event ? (
         <p
           className="typo-body-sm"
           style={{ margin: 0, color: 'var(--color-text-secondary-2)' }}
         >
-          사례 없음 — 상황 적용 시 전 지자체 위험지구에서 검색
+          사례 없음 — 상황 적용 시 위험지구 사례에서 검색
         </p>
       ) : (
         <>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {SCOPES.map((s) => (
+              <ChipButton
+                key={s.key}
+                label={s.label}
+                selected={scope === s.key}
+                onClick={() => setScope(s.key)}
+              />
+            ))}
+          </div>
           <p
             className="typo-body-sm"
             style={{ margin: 0, color: 'var(--color-text-secondary-2)' }}
           >
-            유사 유형 사례 Top-{cases.length} · 타 지자체 포함 · 카드 선택 시 상세
+            {cases.length === 0
+              ? '선택한 범위에 유사 유형 사례 없음'
+              : `유사 유형 사례 Top-${cases.length} · 카드 선택 시 지도 이동`}
           </p>
           {cases.map((c) => {
             const firstEvent = (c.damage_events || [])[0];
-            const otherAdmin = c.admin_code !== state.adminCode;
+            const relation = c.region_relation || '타 지역';
+            const selected = state.selectedDistrictId === c.district_code;
             return (
-              <SurfaceCard key={c.case_id} onClick={() => setOpenCaseId(c.case_id)}>
+              <SurfaceCard
+                key={c.case_id}
+                selected={selected}
+                onClick={() => openCaseCard(c)}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span
                     className="typo-heading-sm"
@@ -119,13 +166,18 @@ export default function TopKPanel() {
                   >
                     {c.district_name}
                   </span>
-                  <MiniBadge
-                    label={c.admin_name || c.admin_code}
-                    tone={otherAdmin ? 'brand' : 'gray'}
-                    title={otherAdmin ? '타 지자체 사례' : '현재 지자체'}
-                  />
+                  <MiniBadge label={c.admin_name || c.admin_code} tone="gray" />
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, margin: '6px 0' }}>
+                  <Badge
+                    label={relation}
+                    leftIcon={false}
+                    mode="light"
+                    size="md"
+                    variant="solid"
+                    color={RELATION_COLORS[relation] || 'grayscale'}
+                    shape="round-square"
+                  />
                   <Badge
                     label={c.disaster_type || '기타'}
                     leftIcon={false}
@@ -297,6 +349,15 @@ export default function TopKPanel() {
         >
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 }}>
             <Badge
+              label={openCase.region_relation || '타 지역'}
+              leftIcon={false}
+              mode="light"
+              size="md"
+              variant="solid"
+              color={RELATION_COLORS[openCase.region_relation] || 'grayscale'}
+              shape="round-square"
+            />
+            <Badge
               label={openCase.disaster_type || '기타'}
               leftIcon={false}
               mode="light"
@@ -305,10 +366,7 @@ export default function TopKPanel() {
               color={kindBadgeColor(openCase.disaster_type)}
               shape="round-square"
             />
-            <MiniBadge
-              label={openCase.admin_name || openCase.admin_code}
-              tone={openCase.admin_code !== state.adminCode ? 'brand' : 'gray'}
-            />
+            <MiniBadge label={openCase.admin_name || openCase.admin_code} tone="gray" />
           </div>
           <FieldRow label="위치">{openCase.location || '—'}</FieldRow>
           <FieldRow label="재해유형">{openCase.disaster_type || '—'}</FieldRow>
@@ -374,13 +432,16 @@ export default function TopKPanel() {
 
           <div style={{ marginTop: 14 }}>
             <Button
-              label="지도에서 보기"
+              label="상세조회 탭 열기"
               variant="fill"
               color="primary"
               size="md"
               leftIcon={false}
               rightIcon={false}
-              onClick={() => goToCase(openCase)}
+              onClick={() => {
+                actions.setRightTab('detail');
+                setOpenCaseId(null);
+              }}
             />
           </div>
           <p

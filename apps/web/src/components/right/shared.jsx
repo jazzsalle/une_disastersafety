@@ -6,8 +6,7 @@
  * radius·그림자)을 그대로 옮긴 로컬 프리미티브로 구성한다.
  * Badge·DotBadge·FilterChip·ListItem·TabFill·Empty는 DS 원본을 사용한다.
  */
-import { useEffect } from 'react';
-import Icon from '../../ds/assets/icons/Icon.jsx';
+import { useEffect, useRef, useState } from 'react';
 import Empty from '../../ds/components/feedback/Empty.jsx';
 import FilterChip from '../../ds/components/display/FilterChip.jsx';
 import { findHazard, kindColor } from '../../api/models.js';
@@ -262,7 +261,30 @@ export function KTable({ columns, rows, emptyText = '자료 없음' }) {
 }
 
 /** 상세 Modal — DS Modal 토큰(radius lg·2레이어 그림자) 준수, ESC·백드롭 닫기 */
+/** X자 닫기 아이콘 — DS InputChip 삭제 아이콘과 동일 패스(DS 자산 재사용) */
+export function XIcon({ size = 14 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 10 10" fill="none" aria-hidden="true">
+      <path
+        d="M 5 6.065 L 1.274 9.791 C 1.134 9.93 0.957 10 0.741 10 C 0.526 10 0.349 9.93 0.209 9.791 C 0.07 9.651 0 9.474 0 9.259 C 0 9.043 0.07 8.866 0.209 8.726 L 3.935 5 L 0.209 1.274 C 0.07 1.134 0 0.957 0 0.741 C 0 0.526 0.07 0.349 0.209 0.209 C 0.349 0.07 0.526 0 0.741 0 C 0.957 0 1.134 0.07 1.274 0.209 L 5 3.935 L 8.726 0.209 C 8.866 0.07 9.043 0 9.259 0 C 9.474 0 9.651 0.07 9.791 0.209 C 9.93 0.349 10 0.526 10 0.741 C 10 0.957 9.93 1.134 9.791 1.274 L 6.065 5 L 9.791 8.726 C 9.93 8.866 10 9.043 10 9.259 C 10 9.474 9.93 9.651 9.791 9.791 C 9.651 9.93 9.474 10 9.259 10 C 9.043 10 8.866 9.93 8.726 9.791 L 5 6.065 Z"
+        fill="currentColor"
+        fillRule="nonzero"
+      />
+    </svg>
+  );
+}
+
+/**
+ * DetailModal — 이름과 달리 **비모달 플로팅 창**(배경 차단 없음, 드래그 이동 가능).
+ *
+ * 시연 요구: 상세 창을 띄운 채 밑의 지도를 보고 조작할 수 있어야 한다.
+ * - 헤더를 잡고 드래그해 위치 이동(pointer 이벤트, 뷰포트 밖 이탈 방지)
+ * - 기본 위치는 지도 위 우측(우측 탭 열 왼쪽 옆) — 지도가 항상 보인다
+ * - 닫기: 우상단 X 버튼(DS InputChip X 패스) 또는 ESC
+ */
 export function DetailModal({ title, badge, onClose, children }) {
+  const [pos, setPos] = useState(null); // null=기본 위치, {x,y}=드래그 후
+  const panelRef = useRef(null);
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === 'Escape') onClose();
@@ -270,80 +292,96 @@ export function DetailModal({ title, badge, onClose, children }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  const startDrag = (e) => {
+    if (e.button !== 0) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    const offX = e.clientX - rect.left;
+    const offY = e.clientY - rect.top;
+    const onMove = (ev) => {
+      const x = Math.min(Math.max(ev.clientX - offX, 8 - rect.width + 80), window.innerWidth - 80);
+      const y = Math.min(Math.max(ev.clientY - offY, 8), window.innerHeight - 48);
+      setPos({ x, y });
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    e.preventDefault();
+  };
+
   return (
     <div
-      onClick={onClose}
+      ref={panelRef}
+      role="dialog"
+      aria-label={typeof title === 'string' ? title : undefined}
       style={{
         position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.4)',
-        zIndex: 2000,
+        ...(pos ? { left: pos.x, top: pos.y } : { top: 84, right: 428 }),
+        zIndex: 1500,
+        background: 'var(--color-surface-primary)',
+        border: '1px solid var(--color-border-default)',
+        borderRadius: 12,
+        width: 'min(460px, calc(100vw - 48px))',
+        maxHeight: '62vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
+        flexDirection: 'column',
+        boxShadow:
+          '0 0 5px var(--shadow-color-ambient-2, rgba(0,0,0,0.06)), 0 0 15px var(--shadow-color-key-3, rgba(0,0,0,0.15))',
       }}
     >
       <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={typeof title === 'string' ? title : undefined}
-        onClick={(e) => e.stopPropagation()}
+        onPointerDown={startDrag}
+        title="드래그하여 이동"
         style={{
-          background: 'var(--color-surface-primary)',
-          border: '1px solid var(--color-border-default)',
-          borderRadius: 12,
-          width: 'min(600px, 100%)',
-          maxHeight: '82vh',
           display: 'flex',
-          flexDirection: 'column',
-          boxShadow:
-            '0 0 5px var(--shadow-color-ambient-2, rgba(0,0,0,0.06)), 0 0 15px var(--shadow-color-key-3, rgba(0,0,0,0.15))',
+          alignItems: 'center',
+          gap: 8,
+          padding: '14px 16px',
+          borderBottom: '1px solid var(--color-border-default)',
+          flexShrink: 0,
+          cursor: 'move',
+          userSelect: 'none',
+          touchAction: 'none',
         }}
       >
-        <div
+        <span
+          className="typo-heading-md"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            padding: '14px 16px',
-            borderBottom: '1px solid var(--color-border-default)',
-            flexShrink: 0,
+            fontWeight: 700,
+            color: 'var(--color-text-primary)',
+            flex: 1,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
           }}
         >
-          <span
-            className="typo-heading-md"
-            style={{
-              fontWeight: 700,
-              color: 'var(--color-text-primary)',
-              flex: 1,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {title}
-          </span>
-          {badge}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="닫기"
-            style={{
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              color: 'var(--color-text-secondary-2)',
-              display: 'flex',
-              padding: 4,
-            }}
-          >
-            <Icon name="닫기" size={20} />
-          </button>
-        </div>
-        <div style={{ padding: 16, overflowY: 'auto', minHeight: 0 }}>{children}</div>
+          {title}
+        </span>
+        {badge}
+        <button
+          type="button"
+          onClick={onClose}
+          onPointerDown={(e) => e.stopPropagation()}
+          aria-label="닫기"
+          style={{
+            border: 'none',
+            background: 'transparent',
+            cursor: 'pointer',
+            color: 'var(--color-text-secondary-2)',
+            display: 'flex',
+            padding: 6,
+          }}
+        >
+          <XIcon size={14} />
+        </button>
       </div>
+      <div style={{ padding: 16, overflowY: 'auto', minHeight: 0 }}>{children}</div>
     </div>
   );
 }

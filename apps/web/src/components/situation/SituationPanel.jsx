@@ -13,7 +13,6 @@
  */
 import { useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
-import { searchCases } from '../../api/client.js';
 import {
   HAZARDS,
   ALERT_KINDS,
@@ -79,10 +78,7 @@ export default function SituationPanel() {
     });
     actions.setEvent(event);
     actions.showToast('success', `상황 적용 완료 · ${event.event_id}`);
-    // 유사 재난 사례(전 지자체) 조회 — 실패는 치명적이지 않음(사례 섹션만 비움)
-    searchCases({ event })
-      .then((res) => actions.setCases(res))
-      .catch(() => actions.setCases(null));
+    // 유사 재난 사례 조회는 TopKPanel이 event·검색범위 변경에 반응해 수행한다
   };
 
   return (
