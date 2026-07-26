@@ -346,8 +346,36 @@ def _relay(
 
 
 # ── mock 폴백 (결정적 — 랜덤 없음) ────────────────────────────────────
+def _criteria_context(event: dict | None) -> str:
+    """event.hazard_code의 공식 판단기준(Q1 정량 조건)을 결정적 문자열로 요약한다.
+
+    "시간당 30mm면 어느 단계인가" 류 질문에 모델이 임의 수치가 아닌 공식 기준으로
+    판정하도록 상류 질의에 주입한다(근거 원칙). 기준 미존재 시 빈 문자열.
+    """
+    hazard = (event or {}).get("hazard_code")
+    if not hazard:
+        return ""
+    rec = next(
+        (c for c in corpus.get_criteria().get("criteria", []) if c.get("hazard_code") == hazard),
+        None,
+    )
+    if not rec or not rec.get("q1_conditions"):
+        return ""
+    lines = []
+    for c in rec["q1_conditions"]:
+        seg = [str(c.get("level") or "")]
+        cond = f"{c.get('period') or ''} {c.get('indicator') or ''} {c.get('operator') or '>='} {c.get('value')}{c.get('unit') or ''}".strip()
+        seg.append(cond)
+        if c.get("condition_group"):
+            seg.append(f"({c.get('logic')} {c['condition_group']})")
+        lines.append(": ".join(s for s in seg if s))
+    header = f"[공식 판단기준 — {rec.get('name_ko')}({hazard}) · 판단주체 {rec.get('judgment_subject')}]"
+    guide = "단계 판정 질문에는 반드시 위 공식 기준 수치로 답하고 기준 출처(판단주체)를 명시할 것."
+    return header + "\n" + "\n".join(lines) + "\n" + guide
+
+
 def _query_with_event(query: str, event: dict | None) -> str:
-    """event 컨텍스트를 질의 뒤에 결정적 형식으로 덧붙인다."""
+    """event 컨텍스트(+해당 재난 공식 판단기준)를 질의 뒤에 결정적 형식으로 덧붙인다."""
     if not event:
         return query
     parts = []
@@ -360,7 +388,11 @@ def _query_with_event(query: str, event: dict | None) -> str:
         parts.append(f"{key}={value}")
     if not parts:
         return query
-    return f"{query}\n\n[상황 정보] " + " · ".join(parts)
+    result = f"{query}\n\n[상황 정보] " + " · ".join(parts)
+    criteria = _criteria_context(event)
+    if criteria:
+        result += "\n\n" + criteria
+    return result
 
 
 def _query_with_poi(query: str, poi: dict | None) -> str:

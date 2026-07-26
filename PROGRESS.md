@@ -65,10 +65,19 @@
   생성형 TabFill/Tab이 미완성 테두리로 렌더되던 문제 → Segment 스타일 탭바로 통일
 - npm run build 통과(미사용 DS Tab 계열 제거로 번들 4.47→3.78MB)
 
+## 2026-07-27 임장 질문 대응 보강 — outputs/"공무원 임장에서 할만한 질문들.txt" 분석 반영
+- 분석: 10개 질문 중 ◎5·△3·✕2(실황 기상·대피 대상 — 본사업 확장 항목) — 대응표를
+  docs/07 §5 Q&A 하위에 수록, Q6(실황 미연동)·Q7(행동매뉴얼) 방어 답변 추가
+- **챗봇 판단기준 주입**(uni_rag._criteria_context): event.hazard_code의 Q1 공식 수치를
+  상류 질의에 자동 첨부 — "시간당 30mm면 어느 단계?"를 기상청 기준으로 판정. pytest 103건(신규 2)
+- **유형 단위 자연어 명령**(chatAgent KIND_SYNONYMS): "산사태/저지대/토사/범람 위험지구
+  보여줘" → 상세조회 재해유형 필터(districtKindFilter 원샷 상태) + 탭 전환. npm run build 통과
+- docs/07 장면 5에 여유 질문 7·8(판단기준 판정·유형 명령) 추가
+
 ## Next steps
 1. 브라우저 데모 리허설(잔여 UI 부분): 배포 URL 로그인 → **docs/07 남원 단일 시나리오**
-   (docs/04 §8은 상세 검증용) — 검색범위 칩·타 지역 배지·플로팅 창 드래그·새 탭바/토글 확인
-2. 커밋·push 후 Vercel 자동 배포 확인(런타임 데이터 districts.json 갱신 포함)
+   — 검색범위 칩·타 지역 배지·플로팅 창·새 탭바/토글·유형 명령·30mm 판정 확인
+2. 커밋·push 후 Vercel 자동 배포 확인
 2. VWorld 키 등록 도메인에 `une-disastersafety.vercel.app` 추가 여부 확인(지도 타일)
 3. 하천 형상 정밀화(선택): 공공데이터포털 'RIMGIS 하천관리지리정보 WFS' 활용신청 검토 —
    승인 시 fetch_geo 소스 체인 최상위에 추가

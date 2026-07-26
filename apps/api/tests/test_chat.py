@@ -401,3 +401,29 @@ def test_relogin_still_401_falls_back_to_mock(client, monkeypatch):
     assert res.json()["mode"] == "mock"
     assert state["login"] == 2  # 최초 1회 + 재로그인 1회(그 이상 없음)
     assert state["chat"] == 2  # 재시도도 1회로 제한
+
+
+# ── 판단기준(Q1 수치) 상류 주입 — "시간당 30mm면 어느 단계?" 판정용 ──
+def test_event_hazard_injects_official_criteria():
+    """event.hazard_code가 있으면 해당 재난의 공식 판단기준 수치가 질의에 첨부된다."""
+    q = uni_rag._query_with_event(
+        "지금 시간당 30mm면 어느 단계야?",
+        {"hazard_code": "T10107", "admin_code": "45190", "alert_kind": "특보"},
+    )
+    assert "지금 시간당 30mm면 어느 단계야?" in q
+    assert "[공식 판단기준" in q and "호우" in q
+    # 호우 Q1: 주의보 3시간 60mm / 경보 3시간 90mm (criteria.json)
+    assert "60" in q and "90" in q
+    assert "기상청" in q  # 판단주체 명시
+    # 결정적: 동일 입력 → 동일 문자열
+    assert q == uni_rag._query_with_event(
+        "지금 시간당 30mm면 어느 단계야?",
+        {"hazard_code": "T10107", "admin_code": "45190", "alert_kind": "특보"},
+    )
+
+
+def test_event_without_hazard_no_criteria_block():
+    """hazard_code 없는 event에는 판단기준 블록을 붙이지 않는다."""
+    q = uni_rag._query_with_event("질의", {"admin_code": "45190"})
+    assert "[상황 정보]" in q
+    assert "[공식 판단기준" not in q

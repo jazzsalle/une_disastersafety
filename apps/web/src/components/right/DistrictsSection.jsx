@@ -71,6 +71,13 @@ export default function DistrictsSection() {
     };
   }, [state.adminCode, actions]);
 
+  // 챗봇 자연어 명령("산사태 위험지구 보여줘")의 유형 필터 요청 소비 — 원샷
+  useEffect(() => {
+    if (!state.districtKindFilter) return;
+    setKindFilter(state.districtKindFilter);
+    actions.setDistrictKindFilter(null);
+  }, [state.districtKindFilter, actions]);
+
   const list = useMemo(() => data?.districts ?? [], [data]);
   const kinds = useMemo(
     () => ['전체', ...new Set(list.map((d) => d.disaster_type).filter(Boolean))],

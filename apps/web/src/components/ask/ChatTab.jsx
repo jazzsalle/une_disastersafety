@@ -124,6 +124,11 @@ export default function ChatTab() {
       if (cmd.kind === 'region') {
         actions.setAdminCode(cmd.region.admin_code);
         confirm = `${cmd.region.admin_name}로 지도를 이동했습니다.`;
+      } else if (cmd.kind === 'kind_filter') {
+        // 재해유형 단위 — 상세조회 탭에 해당 유형 필터 적용(임장 질문 ③④)
+        actions.setDistrictKindFilter(cmd.disasterKind);
+        actions.setRightTab('detail');
+        confirm = `${cmd.disasterKind} 위험지구를 상세조회에 표시했습니다. 지도 마커 색으로도 구분됩니다.`;
       } else {
         goToEntity(cmd.entity);
         confirm = `${cmd.entity.name} 위치로 지도를 이동하고 상세조회를 열었습니다.`;

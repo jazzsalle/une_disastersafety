@@ -51,6 +51,7 @@ export const initialState = {
   selectedDistrictId: null,
   selectedRiverId: null,
   caseList: null,
+  districtKindFilter: null,
   rightTab: 'topk',
   mapHighlight: null,
   chatMessages: [],
@@ -65,6 +66,7 @@ export const ActionTypes = {
   SET_ADMIN_CODE: 'SET_ADMIN_CODE',
   SET_EVENT: 'SET_EVENT',
   SET_CASES: 'SET_CASES',
+  SET_DISTRICT_KIND_FILTER: 'SET_DISTRICT_KIND_FILTER',
   ASK_START: 'ASK_START',
   ASK_SUCCESS: 'ASK_SUCCESS',
   ASK_ERROR: 'ASK_ERROR',
@@ -103,6 +105,9 @@ export function reducer(state, action) {
     case ActionTypes.SET_CASES:
       // 유사 재난 사례(전 지자체) — 상황 적용 시 갱신, 지자체 전환에도 유지
       return { ...state, caseList: action.cases || null };
+    case ActionTypes.SET_DISTRICT_KIND_FILTER:
+      // 상세조회 재해유형 필터 요청(원샷) — DistrictsSection이 적용 후 null로 소비
+      return { ...state, districtKindFilter: action.kind || null };
     case ActionTypes.ASK_START:
       return { ...state, askLoading: true };
     case ActionTypes.ASK_SUCCESS:
@@ -214,6 +219,8 @@ export function AppStateProvider({ children }) {
         dispatch({ type: ActionTypes.SET_ADMIN_CODE, adminCode }),
       setEvent: (event) => dispatch({ type: ActionTypes.SET_EVENT, event }),
       setCases: (cases) => dispatch({ type: ActionTypes.SET_CASES, cases }),
+      setDistrictKindFilter: (kind) =>
+        dispatch({ type: ActionTypes.SET_DISTRICT_KIND_FILTER, kind }),
       askStart: () => dispatch({ type: ActionTypes.ASK_START }),
       askSuccess: (response) =>
         dispatch({ type: ActionTypes.ASK_SUCCESS, response }),

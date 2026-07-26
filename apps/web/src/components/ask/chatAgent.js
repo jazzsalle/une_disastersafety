@@ -40,13 +40,25 @@ export function buildEntities(districtList = [], riverList = []) {
 
 const COMMAND_VERB = /(이동|전환|보여\s*줘|띄워|찾아\s*줘?|위치\s*알려)/;
 
+/** 재해유형 단위 명령 사전 — "저지대/산사태 위험지구 보여줘"(임장 질문 ③④ 대응) */
+const KIND_SYNONYMS = [
+  { kind: '사면재해', words: ['산사태', '사면재해', '사면', '급경사지'] },
+  { kind: '내수재해', words: ['저지대', '내수재해', '내수'] },
+  { kind: '하천재해', words: ['하천재해', '범람'] },
+  { kind: '토사재해', words: ['토사재해', '토석류', '토사'] },
+];
+
 /** 자연어 지도 명령 해석 — 매칭 실패 시 null(일반 챗봇 질의로 처리) */
 export function parseMapCommand(query, entities = []) {
   const q = String(query || '').trim();
   if (!q || !COMMAND_VERB.test(q)) return null;
-  // POI(지구·하천)가 지자체명보다 구체적이므로 먼저 매칭
+  // POI(지구·하천)가 가장 구체적이므로 먼저 매칭
   for (const e of entities) {
     if (e.name.length >= 2 && q.includes(e.name)) return { kind: 'poi', entity: e };
+  }
+  // 재해유형 단위 — "산사태 위험지구 보여줘" 류(개별 지구명 없이 유형만 언급)
+  for (const { kind, words } of KIND_SYNONYMS) {
+    if (words.some((w) => q.includes(w))) return { kind: 'kind_filter', disasterKind: kind };
   }
   for (const r of REGIONS) {
     if (q.includes(r.short_name) || q.includes(r.admin_name)) {
