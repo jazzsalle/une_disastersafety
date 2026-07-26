@@ -169,37 +169,18 @@ export function splitMarkdownTables(text) {
   return segments.length ? segments : [{ type: 'text', text: String(text || '') }];
 }
 
-/** 시연 질문 세트 — docs/07 장면 5 진행 순서. 시연 중 타이핑 없이 칩 클릭으로 진행 */
+/** 시연 질문 세트 — docs/07 업무 흐름 순서, 전건 실응답 검증(2026-07-27).
+ *  1·4·5는 LLM 없이 즉시, 2·3은 실연동(2는 상황 메모 60mm + 판단기준 반영,
+ *  3은 요천 POI 컨텍스트의 기준지점·기준유량 주입으로 응답 확인) */
 export const DEMO_QUESTIONS = [
   '요천 보여줘',
-  '이 하천의 계획홍수량을 알려줘',
-  '특보 기준유량은?',
-  '요천의 산정지점별 계획홍수량을 표로 정리해줘',
-  '지금 시간당 30mm면 어느 단계야?',
-  '산사태 위험지구 보여줘',
+  '지금 어떤 하천이 범람 위험이 있어?',
+  '어떤 수위계를 모니터링해야 해?',
   '저지대 위험지구 보여줘',
+  '산사태 위험지구 보여줘',
 ];
 
-/** 맥락 후속 질문 제안(POI 맞춤 우선) + 시연 질문 세트 상시 표시(중복 제거) */
-export function suggestionsFor(entity, hasResponse) {
-  let contextual = [];
-  if (entity?.type === 'district') {
-    contextual = [
-      '이 지구가 왜 위험지구로 선정되었는지 알려줘',
-      '이 지구의 저감대책을 알려줘',
-      '이 지구의 과거 피해 이력을 알려줘',
-    ];
-  } else if (entity?.type === 'river') {
-    contextual = [
-      '이 하천의 계획홍수량을 알려줘',
-      '이 하천의 특보 기준유량을 알려줘',
-    ];
-  } else if (hasResponse) {
-    contextual = ['방금 답변의 근거 문서를 요약해줘', '인근의 유사한 위험지구를 알려줘'];
-  }
-  const merged = [...contextual];
-  for (const q of DEMO_QUESTIONS) {
-    if (!merged.includes(q)) merged.push(q);
-  }
-  return merged;
+/** 챗봇 하단 질문 칩 — 시연 질문 5종 고정(과다 방지, 사용자 결정 2026-07-27) */
+export function suggestionsFor() {
+  return DEMO_QUESTIONS;
 }

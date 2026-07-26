@@ -415,6 +415,30 @@ def _query_with_poi(query: str, poi: dict | None) -> str:
         for label, key in (("등급", "grade"), ("관할", "admin_name"), ("계획빈도", "design_frequency_yr")):
             if rec.get(key):
                 parts.append(f"{label}: {rec[key]}")
+        # 홍수특보 기준 수위관측 지점 — "어떤 수위계를 모니터링?" 질의 대응
+        ref = rec.get("warning_reference_station") or {}
+        if ref.get("name"):
+            ref_bits = [ref["name"]]
+            if ref.get("station_code"):
+                ref_bits.append(str(ref["station_code"]))
+            if ref.get("station_no"):
+                ref_bits.append(str(ref["station_no"]))
+            parts.append("홍수특보 기준 수위관측 지점: " + " ".join(ref_bits))
+        # 산정지점별 계획홍수량·홍수특보 기준유량 — 문서 발췌만으로는 표가 잘리는
+        # 케이스가 있어 정형값(rivers.json)을 직접 주입(주의보=50%·경보=70%)
+        st_lines = []
+        for s in (rec.get("stations") or [])[:12]:
+            fw = s.get("flood_warning") or {}
+            st_lines.append(
+                f"{s.get('station_code')} {s.get('station_name')}: "
+                f"계획홍수량 {s.get('design_flood_m3s')}㎥/s({s.get('design_frequency_yr')}년), "
+                f"홍수주의보 {fw.get('advisory_m3s')}·홍수경보 {fw.get('alert_m3s')}㎥/s"
+            )
+        if st_lines:
+            parts.append(
+                f"산정지점별 계획홍수량·홍수특보 기준유량(주의보=계획홍수량 50%·경보=70%, "
+                f"근거 {rec.get('plan_name') or '하천기본계획'}): " + " / ".join(st_lines)
+            )
         return f"{query}\n\n[선택 하천 정보] " + " · ".join(parts)
     rec = next(
         (d for d in corpus.get_districts().get("districts", []) if d.get("district_code") == poi_id),

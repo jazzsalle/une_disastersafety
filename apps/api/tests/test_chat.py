@@ -427,3 +427,11 @@ def test_event_without_hazard_no_criteria_block():
     q = uni_rag._query_with_event("질의", {"admin_code": "45190"})
     assert "[상황 정보]" in q
     assert "[공식 판단기준" not in q
+
+
+# ── 하천 POI — 기준지점·계획홍수량·기준유량 주입("어떤 수위계?" 질의 대응) ──
+def test_poi_river_context_includes_stations():
+    q = uni_rag._query_with_poi("어떤 수위계를 모니터링해야 해?", {"type": "river", "id": "RIV-YC"})
+    assert "남원수위표" in q, "홍수특보 기준 수위관측 지점 주입 필요"
+    assert "2005" in q and "1404" in q, "Y4 계획홍수량·경보 기준유량 주입 필요"
+    assert "주의보=계획홍수량 50%" in q
