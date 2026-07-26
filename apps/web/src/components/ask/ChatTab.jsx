@@ -25,6 +25,7 @@ import Button from '../../ds/components/actions/Button.jsx';
 import Badge from '../../ds/components/display/Badge.jsx';
 import Spinner from '../../ds/components/feedback/Spinner.jsx';
 import Icon from '../../ds/assets/icons/Icon.jsx';
+import { XIcon } from '../right/shared.jsx';
 import { citeLoc, truncate } from './askUtils.js';
 
 export default function ChatTab() {
@@ -314,7 +315,7 @@ export default function ChatTab() {
                 aria-label="POI 선택 해제"
                 onClick={clearPoi}
               >
-                <Icon name="닫기" size={12} />
+                <XIcon size={10} />
               </button>
             </span>
           )}

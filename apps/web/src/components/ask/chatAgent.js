@@ -169,23 +169,37 @@ export function splitMarkdownTables(text) {
   return segments.length ? segments : [{ type: 'text', text: String(text || '') }];
 }
 
-/** 맥락 후속 질문 제안 — POI 선택 시 맞춤, 응답 후 일반 */
+/** 시연 질문 세트 — docs/07 장면 5 진행 순서. 시연 중 타이핑 없이 칩 클릭으로 진행 */
+export const DEMO_QUESTIONS = [
+  '요천 보여줘',
+  '이 하천의 계획홍수량을 알려줘',
+  '특보 기준유량은?',
+  '요천의 산정지점별 계획홍수량을 표로 정리해줘',
+  '지금 시간당 30mm면 어느 단계야?',
+  '산사태 위험지구 보여줘',
+  '저지대 위험지구 보여줘',
+];
+
+/** 맥락 후속 질문 제안(POI 맞춤 우선) + 시연 질문 세트 상시 표시(중복 제거) */
 export function suggestionsFor(entity, hasResponse) {
+  let contextual = [];
   if (entity?.type === 'district') {
-    return [
+    contextual = [
       '이 지구가 왜 위험지구로 선정되었는지 알려줘',
       '이 지구의 저감대책을 알려줘',
       '이 지구의 과거 피해 이력을 알려줘',
     ];
-  }
-  if (entity?.type === 'river') {
-    return [
+  } else if (entity?.type === 'river') {
+    contextual = [
       '이 하천의 계획홍수량을 알려줘',
       '이 하천의 특보 기준유량을 알려줘',
     ];
+  } else if (hasResponse) {
+    contextual = ['방금 답변의 근거 문서를 요약해줘', '인근의 유사한 위험지구를 알려줘'];
   }
-  if (hasResponse) {
-    return ['방금 답변의 근거 문서를 요약해줘', '인근의 유사한 위험지구를 알려줘'];
+  const merged = [...contextual];
+  for (const q of DEMO_QUESTIONS) {
+    if (!merged.includes(q)) merged.push(q);
   }
-  return [];
+  return merged;
 }
