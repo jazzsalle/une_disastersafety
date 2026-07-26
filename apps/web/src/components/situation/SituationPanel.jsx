@@ -7,8 +7,9 @@
  *               actions.setRightTab('criteria')     — 재난유형 선택 시 판단기준 탭 전환
  *               actions.showToast(kind, message)    — 필수값 미선택 안내
  * - 상수·API : HAZARDS·ALERT_KINDS·ALERT_LEVELS·buildEvent·findRegion(api/models.js)
- * - 구성     : 재난유형 ChoiceChip 5종(T코드 병기) / 경보종류·단계 Segment(동적) /
- *              발생일시 Datepicker / 피해·통제 키워드 InputChip / 상황 메모 / [적용]
+ * - 구성     : 재난유형 Segment 5종(유형명만 — T코드는 aria로만) / 경보종류·단계
+ *              Segment(동적) / 발생일시 Datepicker / 피해·통제 키워드(프리셋 토글
+ *              Segment + 자유입력 InputChip) / 상황 메모 / [적용]
  * - 레이아웃 : 좌측 300px 열 전체 높이(부모 flex가 관리)
  */
 import { useState } from 'react';
@@ -20,7 +21,6 @@ import {
   buildEvent,
   findRegion,
 } from '../../api/models.js';
-import { ChoiceChip } from '../../ds/components/display/ChoiceChip.jsx';
 import { Segment } from '../../ds/components/inputs/Segment.jsx';
 import { Button } from '../../ds/components/actions/Button.jsx';
 import { Clickable, Field, fieldBoxStyle } from './controls.jsx';
@@ -106,23 +106,33 @@ export default function SituationPanel() {
         </p>
       </div>
 
-      {/* 재난유형 — ChoiceChip 5종 (name_ko + T코드 병기) */}
+      {/* 재난유형 — 경보종류와 동일한 Segment 버튼(유형명만 표기, T코드 미표기) */}
       <Field label="재난유형">
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div
+          style={{
+            display: 'inline-flex',
+            flexWrap: 'wrap',
+            gap: 2,
+            padding: 2,
+            borderRadius: 8,
+            background: 'var(--color-surface-gray-subtle)',
+            alignSelf: 'flex-start',
+          }}
+        >
           {HAZARDS.map((h) => (
             <Clickable
               key={h.event_code}
               onClick={() => pickHazard(h.event_code)}
-              ariaLabel={`재난유형 ${h.name_ko}`}
+              ariaLabel={`재난유형 ${h.name_ko} (${h.hazard_code})`}
               ariaPressed={eventCode === h.event_code}
-              style={{ borderRadius: 1000 }}
             >
-              <ChoiceChip
-                label={`${h.name_ko} ${h.hazard_code}`}
-                variant={eventCode === h.event_code ? 'fill' : 'outline'}
+              <Segment
+                lablel={h.name_ko}
+                icon={false}
+                intent={eventCode === h.event_code ? 'primary' : 'none'}
                 selected={eventCode === h.event_code}
                 state="default"
-                size="md"
+                size="sm"
               />
             </Clickable>
           ))}

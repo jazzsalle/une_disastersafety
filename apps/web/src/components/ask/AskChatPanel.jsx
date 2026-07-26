@@ -10,7 +10,7 @@
  *            selectPassage/selectDistrict/selectRiver/setRightTab, showToast
  */
 import { useState } from 'react';
-import Tab from '../../ds/components/navigation/Tab.jsx';
+import { Segment } from '../../ds/components/inputs/Segment.jsx';
 import AskAnswerTab from './AskAnswerTab.jsx';
 import ChatTab from './ChatTab.jsx';
 import './ask.css';
@@ -25,26 +25,37 @@ export default function AskChatPanel() {
 
   return (
     <section className="ask-panel" aria-label="질의응답 패널">
+      {/* 상황입력 경보종류와 동일한 Segment 탭바 — 생성형 Tab의 미완성 테두리 교체 */}
       <div className="ask-tabbar" role="tablist" aria-label="질의응답 탭">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            className="ask-pressable"
-            onClick={() => setTab(t.id)}
-          >
-            <Tab
-              label={t.label}
-              selected={tab === t.id}
-              leftIcon={false}
-              badge={false}
-              size="md"
-              state="default"
-            />
-          </button>
-        ))}
+        <div
+          style={{
+            display: 'inline-flex',
+            gap: 2,
+            padding: 2,
+            borderRadius: 8,
+            background: 'var(--color-surface-gray-subtle)',
+          }}
+        >
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className="ask-pressable"
+              onClick={() => setTab(t.id)}
+            >
+              <Segment
+                lablel={t.label}
+                icon={false}
+                intent={tab === t.id ? 'primary' : 'none'}
+                selected={tab === t.id}
+                state="default"
+                size="sm"
+              />
+            </button>
+          ))}
+        </div>
       </div>
       {tab === 'ask' ? <AskAnswerTab /> : <ChatTab />}
     </section>

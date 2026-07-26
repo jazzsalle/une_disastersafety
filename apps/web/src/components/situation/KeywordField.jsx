@@ -1,13 +1,13 @@
 /**
  * KeywordField — 피해·통제 키워드 입력 (T3 소유).
  *
- * 선택 키워드: DS InputChip(클릭 시 삭제) / 프리셋 제안: DS ActionChip(클릭 시 추가)
- * 자유 입력: 네이티브 input(Enter·플러스 버튼으로 추가).
+ * 프리셋 5종: 경보종류와 동일한 Segment 토글 버튼(클릭 시 추가/해제)
+ * 자유 입력 키워드: DS InputChip(클릭 시 삭제) + 네이티브 input(Enter·플러스 추가)
  * props: { value: string[], onChange(string[]) }
  */
 import { useState } from 'react';
 import { InputChip } from '../../ds/components/display/InputChip.jsx';
-import { ActionChip } from '../../ds/components/display/ActionChip.jsx';
+import { Segment } from '../../ds/components/inputs/Segment.jsx';
 import Icon from '../../ds/assets/icons/Icon.jsx';
 import { Clickable, fieldBoxStyle } from './controls.jsx';
 
@@ -36,14 +36,49 @@ export default function KeywordField({ value, onChange }) {
     setDraft('');
   };
 
-  const remainingPresets = KEYWORD_PRESETS.filter((p) => !value.includes(p));
+  const customKeywords = value.filter((kw) => !KEYWORD_PRESETS.includes(kw));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {/* 선택된 키워드 — 클릭 시 삭제 */}
-      {value.length > 0 && (
+      {/* 프리셋 5종 — 경보종류와 동일한 Segment 토글(클릭 시 추가/해제) */}
+      <div
+        style={{
+          display: 'inline-flex',
+          flexWrap: 'wrap',
+          gap: 2,
+          padding: 2,
+          borderRadius: 8,
+          background: 'var(--color-surface-gray-subtle)',
+          alignSelf: 'flex-start',
+        }}
+      >
+        {KEYWORD_PRESETS.map((kw) => {
+          const active = value.includes(kw);
+          return (
+            <Clickable
+              key={kw}
+              onClick={() => (active ? remove(kw) : add(kw))}
+              title={active ? '키워드 해제' : '키워드 추가'}
+              ariaLabel={`키워드 ${kw}`}
+              ariaPressed={active}
+            >
+              <Segment
+                lablel={kw}
+                icon={false}
+                intent={active ? 'primary' : 'none'}
+                selected={active}
+                state="default"
+                size="sm"
+              />
+            </Clickable>
+          );
+        })}
+      </div>
+
+      {/* 자유 입력 키워드 — 클릭 시 삭제 */}
+      {customKeywords.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {value.map((kw) => (
+          {customKeywords.map((kw) => (
             <Clickable
               key={kw}
               onClick={() => remove(kw)}
@@ -52,28 +87,6 @@ export default function KeywordField({ value, onChange }) {
               style={{ borderRadius: 1000 }}
             >
               <InputChip label={kw} leftIcon={false} variant="fill" size="sm" />
-            </Clickable>
-          ))}
-        </div>
-      )}
-
-      {/* 프리셋 제안 — 클릭 시 추가 */}
-      {remainingPresets.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {remainingPresets.map((kw) => (
-            <Clickable
-              key={kw}
-              onClick={() => add(kw)}
-              title="키워드 추가"
-              ariaLabel={`키워드 추가 ${kw}`}
-              style={{ borderRadius: 1000 }}
-            >
-              <ActionChip
-                label={kw}
-                variant="outline"
-                color="grayscale"
-                size="sm"
-              />
             </Clickable>
           ))}
         </div>
