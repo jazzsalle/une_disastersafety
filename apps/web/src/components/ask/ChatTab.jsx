@@ -15,6 +15,7 @@ import { useAppState } from '../../state/AppState.jsx';
 import { chat, districts, rivers } from '../../api/client.js';
 import { requireLogin } from '../auth/LoginGate.jsx';
 import {
+  answerFromData,
   buildEntities,
   parseMapCommand,
   splitByEntities,
@@ -33,14 +34,18 @@ export default function ChatTab() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [entities, setEntities] = useState([]);
+  const [rawData, setRawData] = useState({ districts: [], rivers: [] });
   const listRef = useRef(null);
 
-  // 지구·하천 엔티티 목록(전 지자체) — POI 칩·지명 링크·명령 파서 공용
+  // 지구·하천 목록(전 지자체) — 엔티티(POI 칩·지명 링크·명령 파서)와
+  // 원본 레코드(정형 데이터 즉답 answerFromData) 공용
   useEffect(() => {
     let alive = true;
     Promise.all([districts(), rivers()])
       .then(([d, r]) => {
-        if (alive) setEntities(buildEntities(d?.districts, r?.rivers));
+        if (!alive) return;
+        setEntities(buildEntities(d?.districts, r?.rivers));
+        setRawData({ districts: d?.districts || [], rivers: r?.rivers || [] });
       })
       .catch(() => {}); // 목록 실패 시 부가기능만 비활성(챗봇 자체는 동작)
     return () => {
@@ -135,6 +140,22 @@ export default function ChatTab() {
         confirm = `${cmd.entity.name} 위치로 지도를 이동하고 상세조회를 열었습니다.`;
       }
       actions.addChatMessage({ role: 'assistant', content: confirm, mode: 'agent' });
+      return;
+    }
+
+    // 정형 데이터 즉답(하이브리드) — 수위계·저감대책·선정 이유·계획홍수량·피해 이력은
+    // 관리대장·하천기본계획 JSON에서 즉시 조합(LLM 미호출·출처 병기). 미매칭 시 UNI 경로.
+    const dataAnswer = answerFromData(
+      q,
+      selectedEntity,
+      rawData.districts,
+      rawData.rivers,
+      state.adminCode,
+    );
+    if (dataAnswer) {
+      setInput('');
+      actions.addChatMessage({ role: 'user', content: q });
+      actions.addChatMessage({ role: 'assistant', content: dataAnswer.text, mode: 'data' });
       return;
     }
 
@@ -233,6 +254,19 @@ export default function ChatTab() {
                     {m.notice}
                   </span>
                 )}
+              </div>
+            )}
+            {m.role === 'assistant' && m.mode === 'data' && (
+              <div className="ask-bubble-meta">
+                {/* 정형 데이터 즉답 — 무엇으로 답했는지 명시(XAI), LLM 미호출 */}
+                <Badge
+                  label="정형 데이터 즉답"
+                  variant="outline"
+                  color="grayscale"
+                  size="md"
+                  leftIcon={false}
+                  mode="light"
+                />
               </div>
             )}
             {m.streaming && !m.content ? (

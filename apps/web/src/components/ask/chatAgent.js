@@ -184,3 +184,146 @@ export const DEMO_QUESTIONS = [
 export function suggestionsFor() {
   return DEMO_QUESTIONS;
 }
+
+// ── 정형 데이터 즉답(하이브리드) ─────────────────────────────────────
+// 관리대장·하천기본계획 정형 JSON에 답이 그대로 있는 질문은 LLM(UNI)을 거치지
+// 않고 즉시 조합해 답한다 — 대기 0초, 수치 오류 0(출처 병기). 매칭 실패 시
+// null을 반환해 기존 UNI 실연동 경로로 넘어간다(종합 판단 질문 담당).
+
+const RE_GAUGE = /(수위계|우량계|수위 ?관측|모니터링)/;
+const RE_FLOW = /(계획홍수량|기준유량|특보.*유량)/;
+const RE_MITIGATION = /저감\s*대책/;
+const RE_WHY = /(왜.*(위험|선정)|선정.*(이유|사유)|위험\s*요인)/;
+const RE_HISTORY = /(피해\s*이력|과거.*피해)/;
+
+/** 하천 산정지점 → GFM 표(계획홍수량·홍수특보 기준유량) */
+function stationTable(river) {
+  const rows = (river.stations || []).slice(0, 12);
+  if (!rows.length) return '';
+  const lines = [
+    '| 부호 | 산정지점 | 계획홍수량(㎥/s) | 주의보(50%) | 경보(70%) |',
+    '| --- | --- | --- | --- | --- |',
+  ];
+  for (const s of rows) {
+    const fw = s.flood_warning || {};
+    lines.push(
+      `| ${s.station_code || ''} | ${s.station_name || ''} | ` +
+        `${fmt(s.design_flood_m3s)}(${s.design_frequency_yr || ''}년) | ` +
+        `${fmt(fw.advisory_m3s)} | ${fmt(fw.alert_m3s)} |`,
+    );
+  }
+  return lines.join('\n');
+}
+
+function fmt(n) {
+  return n === null || n === undefined ? '—' : Number(n).toLocaleString('ko-KR');
+}
+
+function riverSource(river) {
+  return `\n\n— 출처: ${river.plan_name || '하천기본계획'}`;
+}
+
+function districtSource(d) {
+  const ev = d.evidence || {};
+  const page = ev.page_label || (ev.pdf_page != null ? `p.${ev.pdf_page}` : '');
+  return `\n\n— 출처: ${ev.doc_title || '관리대장'}${page ? ` · ${page}` : ''}`;
+}
+
+const NEED_DISTRICT = '어느 위험지구인지 먼저 알려주세요 — 지도에서 지구를 클릭하거나 "○○지구 보여줘"라고 말하면 됩니다.';
+const NEED_RIVER = '어느 하천인지 먼저 알려주세요 — 지도에서 하천을 클릭하거나 "요천 보여줘"라고 말하면 됩니다.';
+
+/**
+ * 정형 질의 즉답 — 매칭 시 {text}(마크다운, 출처 병기), 아니면 null.
+ * @param {string} query
+ * @param {{type:string,id:string}|undefined} poi  선택 POI(entities 항목)
+ * @param {Array} districtList  districts() 원본 레코드(전 지자체)
+ * @param {Array} riverList     rivers() 원본 레코드(전 지자체)
+ * @param {string} adminCode    현재 지자체(하천 질의의 POI 부재 시 폴백)
+ */
+export function answerFromData(query, poi, districtList = [], riverList = [], adminCode = '') {
+  const q = String(query || '');
+  const district =
+    poi?.type === 'district'
+      ? districtList.find((d) => d.district_code === poi.id)
+      : undefined;
+  const river =
+    poi?.type === 'river'
+      ? riverList.find((r) => r.river_id === poi.id)
+      : riverList.find((r) => r.admin_code === adminCode); // POI 없으면 현 지자체 하천
+
+  // 1·2. 수위계/기준지점·계획홍수량/기준유량 — 하천 정형
+  if (RE_GAUGE.test(q) || RE_FLOW.test(q)) {
+    if (!river) return { text: NEED_RIVER };
+    const parts = [];
+    const ref = river.warning_reference_station || {};
+    if (RE_GAUGE.test(q) && ref.name) {
+      parts.push(
+        `${river.name}의 홍수특보 기준 수위관측 지점은 **${ref.name}(${ref.station_code || ''}` +
+          `${ref.station_no ? `, ${ref.station_no}` : ''})** 입니다. ` +
+          `이 지점의 유량이 홍수주의보 기준(계획홍수량의 50%)·홍수경보 기준(70%)에 ` +
+          `접근하는지 감시합니다.`,
+      );
+    } else {
+      parts.push(`${river.name}(${river.grade || '하천'})의 산정지점별 계획홍수량과 홍수특보 기준유량입니다.`);
+    }
+    const table = stationTable(river);
+    if (table) parts.push(table);
+    return { text: parts.join('\n\n') + riverSource(river) };
+  }
+
+  // 3. 저감대책 — 지구 정형
+  if (RE_MITIGATION.test(q)) {
+    if (!district) return { text: NEED_DISTRICT };
+    const items = (district.mitigation || []).map((m) => `- ${m}`).join('\n');
+    const extra = [];
+    if (district.implementation_method) extra.push(`시행방법 ${district.implementation_method}`);
+    if (district.cost_million_krw != null) extra.push(`사업비 ${fmt(district.cost_million_krw)}백만원`);
+    if (district.priority) extra.push(`우선순위 ${district.priority}`);
+    return {
+      text:
+        `**${district.district_name}**(${district.disaster_type || ''})의 저감대책입니다.\n\n` +
+        (items || '- 관리대장에 저감대책 미기재') +
+        (extra.length ? `\n\n${extra.join(' · ')}` : '') +
+        districtSource(district),
+    };
+  }
+
+  // 4. 선정 이유·위험요인 — 지구 정형
+  if (RE_WHY.test(q)) {
+    if (!district) return { text: NEED_DISTRICT };
+    const factors = (district.risk_factors || []).map((f) => `- ${f}`).join('\n');
+    const gradeLine = district.grade ? `\n\n위험등급: ${district.grade}` : '';
+    return {
+      text:
+        `**${district.district_name}**은(는) **${district.disaster_type || '재해'} 위험지구**로 관리되고 있으며, ` +
+        `관리대장에 기재된 위험요인은 다음과 같습니다.\n\n` +
+        (factors || '- 위험요인 상세 미기재') +
+        gradeLine +
+        districtSource(district),
+    };
+  }
+
+  // 5. 피해 이력 — 지구 정형(damage_events 시드)
+  if (RE_HISTORY.test(q)) {
+    if (!district) return { text: NEED_DISTRICT };
+    const events = district.damage_events || [];
+    if (!events.length && !district.damage_history) {
+      return {
+        text:
+          `**${district.district_name}**은(는) 관리대장·저감계획에 구조화된 피해이력이 기재되어 있지 않습니다.` +
+          districtSource(district),
+      };
+    }
+    const lines = events.map((de) => {
+      const ev = de.evidence || {};
+      const src = ev.doc_title ? ` (출처: ${ev.doc_title}${ev.page != null ? ` p.${ev.page}` : ''})` : '';
+      return `- **${de.occurred || ''} ${de.event_name || ''}** — ${de.description || ''}${src}`;
+    });
+    if (district.damage_history) lines.push(`- 관리대장 피해이력: ${district.damage_history}`);
+    return {
+      text: `**${district.district_name}**의 피해 이력입니다.\n\n${lines.join('\n')}`,
+    };
+  }
+
+  return null;
+}
