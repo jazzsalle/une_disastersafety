@@ -51,7 +51,8 @@ export default function SituationPanel() {
   const pickHazard = (code) => {
     setEventCode(code);
     const next = levelsFor(alertKind, code);
-    if (!next.includes(alertLevel)) setAlertLevel(next[0]);
+    if (next.length === 0) setAlertLevel(null);
+    else if (!next.includes(alertLevel)) setAlertLevel(next[0]);
     // 유형 선택 시 판단기준 탭 자동 전환
     actions.setRightTab('criteria');
   };
@@ -59,7 +60,8 @@ export default function SituationPanel() {
   const pickKind = (kind) => {
     setAlertKind(kind);
     const next = levelsFor(kind, eventCode);
-    if (!next.includes(alertLevel)) setAlertLevel(next[0]);
+    if (next.length === 0) setAlertLevel(null); // 미발령 — 단계 없음
+    else if (!next.includes(alertLevel)) setAlertLevel(next[0]);
   };
 
   const apply = () => {
@@ -67,11 +69,12 @@ export default function SituationPanel() {
       actions.showToast('error', '재난유형·지자체 선택 필수');
       return;
     }
+    const noAlert = alertKind === '미발령';
     const event = buildEvent({
       event_code: eventCode,
       admin_code: state.adminCode,
-      alert_kind: alertKind,
-      alert_level: alertLevel,
+      alert_kind: noAlert ? null : alertKind,
+      alert_level: noAlert ? null : alertLevel,
       onset: toLocalIso(onset),
       keywords,
       note: note.trim() || null,
@@ -169,40 +172,48 @@ export default function SituationPanel() {
             </Clickable>
           ))}
         </div>
+        <p
+          className="typo-body-sm"
+          style={{ margin: '6px 0 0', color: 'var(--color-text-secondary-2)' }}
+        >
+          기상청(특보)·행안부(위기경보)가 발령·통보한 값을 등록 — 발령 전 상황은 미발령
+        </p>
       </Field>
 
-      {/* 경보 단계 — 경보종류·재난유형에 따라 동적 */}
-      <Field label="경보 단계">
-        <div
-          style={{
-            display: 'inline-flex',
-            flexWrap: 'wrap',
-            gap: 2,
-            padding: 2,
-            borderRadius: 8,
-            background: 'var(--color-surface-gray-subtle)',
-            alignSelf: 'flex-start',
-          }}
-        >
-          {levels.map((level) => (
-            <Clickable
-              key={level}
-              onClick={() => setAlertLevel(level)}
-              ariaLabel={`경보 단계 ${level}`}
-              ariaPressed={alertLevel === level}
-            >
-              <Segment
-                lablel={level}
-                icon={false}
-                intent={alertLevel === level ? 'primary' : 'none'}
-                selected={alertLevel === level}
-                state="default"
-                size="sm"
-              />
-            </Clickable>
-          ))}
-        </div>
-      </Field>
+      {/* 경보 단계 — 경보종류·재난유형에 따라 동적(미발령 시 단계 없음) */}
+      {levels.length > 0 && (
+        <Field label="경보 단계">
+          <div
+            style={{
+              display: 'inline-flex',
+              flexWrap: 'wrap',
+              gap: 2,
+              padding: 2,
+              borderRadius: 8,
+              background: 'var(--color-surface-gray-subtle)',
+              alignSelf: 'flex-start',
+            }}
+          >
+            {levels.map((level) => (
+              <Clickable
+                key={level}
+                onClick={() => setAlertLevel(level)}
+                ariaLabel={`경보 단계 ${level}`}
+                ariaPressed={alertLevel === level}
+              >
+                <Segment
+                  lablel={level}
+                  icon={false}
+                  intent={alertLevel === level ? 'primary' : 'none'}
+                  selected={alertLevel === level}
+                  state="default"
+                  size="sm"
+                />
+              </Clickable>
+            ))}
+          </div>
+        </Field>
+      )}
 
       {/* 발생 일시 — 기본 현재 */}
       <Field label="발생 일시">

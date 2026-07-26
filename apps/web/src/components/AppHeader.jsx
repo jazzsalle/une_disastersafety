@@ -178,7 +178,8 @@ export default function AppHeader() {
           <Badge
             label={[
               hazard?.name_ko,
-              `${event.alert_kind ?? '경보'} ${alert.label}`,
+              // 미발령(alert_kind 없음) — 발령 전 상황 등록 상태를 명시
+              event.alert_kind ? `${event.alert_kind} ${alert.label}` : '특보 미발령',
             ]
               .filter(Boolean)
               .join(' · ')}

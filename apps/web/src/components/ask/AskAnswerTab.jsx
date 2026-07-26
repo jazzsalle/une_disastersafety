@@ -29,11 +29,11 @@ import CitationModal from './CitationModal.jsx';
 import MarkdownAnswer from './MarkdownAnswer.jsx';
 import { citeLoc, truncate } from './askUtils.js';
 
-/** 빈 상태 예시 질의 3종 — 클릭 시 입력 채움 */
+/** 시연 질의 3종 — docs/07 장면 4 순서, 클릭 시 즉시 전송(상시 표시) */
 const EXAMPLE_QUERIES = [
-  { label: '호우 침수 대응', query: '호우 특보 발령 시 침수 우려 지구의 대응 사례' },
-  { label: '계획홍수량 초과', query: '계획홍수량 초과 우려 시 홍수특보 판단 기준' },
-  { label: '산사태 위험', query: '산사태 위험지구의 위험요인과 저감대책' },
+  { label: '① 요천 계획홍수량·기준유량', query: '홍수 시 요천 계획홍수량과 홍수특보 기준유량' },
+  { label: '② 침수 위험지구·대응 사례', query: '홍수 시 침수 위험지구와 대응 사례' },
+  { label: '③ 산사태 위험·판단기준', query: '산사태 위험지구와 토양함수지수 판단기준' },
 ];
 
 export default function AskAnswerTab() {
@@ -49,9 +49,9 @@ export default function AskAnswerTab() {
   const topK = selectTopKResults(state);
   const refs = selectStructuredRefs(state);
 
-  const submit = async () => {
+  const submit = async (textArg) => {
     if (state.askLoading) return;
-    const q = query.trim();
+    const q = (typeof textArg === 'string' ? textArg : query).trim();
     if (!q) {
       actions.showToast('info', '질의 입력 필요');
       return;
@@ -131,6 +131,21 @@ export default function AskAnswerTab() {
         </button>
       </div>
 
+      {/* 시연 질의 칩 — 상시 표시, 클릭 즉시 전송(docs/07 장면 4 순서) */}
+      <div className="ask-chiprow" style={{ padding: '0 12px 8px' }}>
+        {EXAMPLE_QUERIES.map((ex) => (
+          <button
+            key={ex.label}
+            type="button"
+            className="ask-pressable"
+            disabled={state.askLoading}
+            onClick={() => submit(ex.query)}
+          >
+            <ActionChip label={ex.label} variant="outline" color="primary" size="sm" />
+          </button>
+        ))}
+      </div>
+
       <div className="ask-scroll">
         {/* 로딩 */}
         {state.askLoading && (
@@ -140,26 +155,14 @@ export default function AskAnswerTab() {
           </div>
         )}
 
-        {/* 빈 상태 — 예시 질의 */}
+        {/* 빈 상태 안내 */}
         {!state.askLoading && !res && (
           <div className="ask-empty">
             <p className="typo-body-sm ask-section-title" style={{ margin: 0 }}>
               {state.event
-                ? '예시 질의 선택 또는 직접 입력'
+                ? '상단 시연 질의 칩 클릭 또는 직접 입력'
                 : '좌측 상황입력 패널에서 상황 적용 후 질의 가능'}
             </p>
-            <div className="ask-chiprow">
-              {EXAMPLE_QUERIES.map((ex) => (
-                <button
-                  key={ex.label}
-                  type="button"
-                  className="ask-pressable"
-                  onClick={() => setQuery(ex.query)}
-                >
-                  <ActionChip label={ex.label} variant="outline" color="primary" size="sm" />
-                </button>
-              ))}
-            </div>
           </div>
         )}
 
