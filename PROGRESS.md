@@ -1,7 +1,20 @@
 # PROGRESS
 
 ## Last updated
-2026-07-27 (집 PC 세션 종료 — 회사 PC 인계)
+2026-07-30 (외부 공개용 public-demo 브랜치 신설 — master 코드 변경 없음)
+
+## 2026-07-30 — 외부 공개용 public-demo 브랜치 (master는 그대로)
+- **`public-demo` 브랜치 신설**(최신 master c630da2 기반): 외부 공개용으로 로그인 게이트·
+  `/api/auth/*`·UNI RAG 연동 전부 제거, 챗봇은 로컬 데이터 직조회(services/chatbot.py —
+  BM25+키워드 폴백, 판단기준·하천 정형값 주입 유지). 질문 칩·정형 즉답 하이브리드는 그대로 동작
+- **공개 URL**: https://une-disaster-demo.vercel.app (프리뷰 배포 + 별칭).
+  public-demo에 푸시 → 자동 재배포 후 `npx vercel alias set <새 배포 URL>
+  une-disaster-demo.vercel.app` 재실행 필요. **master로 머지 금지**(공개 데모 전용)
+- **Vercel 계정 설정 변경 2건(전 브랜치 영향)**: ① Deployment Protection(Vercel
+  Authentication) 해제 — 모든 프리뷰 URL이 공개됨 ② `VITE_VWORLD_API_KEY`를 Preview
+  환경에도 추가(기존 Production 전용이라 프리뷰 빌드에서 지도 미표시였음)
+- VWorld 키 등록 도메인에 `une-disaster-demo.vercel.app` 추가됨(타일 200 확인)
+- 구버전 기반 `public-mock` 브랜치는 원격·로컬 모두 삭제
 
 ## 회사 PC 인계 사항 (2026-07-27)
 1. **git pull만 하면 됨** — 전부 push·Vercel 배포 반영 완료(최종 7445d74).
