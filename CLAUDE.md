@@ -5,7 +5,7 @@ NIA 「재난안전 AI데이터 구축」 사업(티쓰리큐 컨소시엄)에�
 - 1차 POC 대상 지자체: 의왕시·구미시·남원시 (본사업 목표: 부산/인제/영천)
 - 대상 재난 5종(사업 기준): 호우(HEAVY_RAIN·T10107)·홍수(FLOOD·T10206)·수해/침수(INUNDATION·T10106)·태풍(TYPHOON·T10105)·산사태(LANDSLIDE·T10401)
 - 시범서비스 모듈 5종: ①상황입력 패널 ②지도 통합 뷰어(L1~L4) ③유사사례 Top-K 목록 ④상세조회 ⑤정합성(Citation·요인 기여도) + ⑥대화형 챗봇(UNI RAG System main chat API 연계)
-- 설계 문서: `docs/00_사업수행계획서_분석.md`(사업 컨텍스트) → `DESIGN.md`(아키텍처) → `docs/01_기획서.md`, `docs/02_데이터분석.md`, `docs/03_화면설계.md`, `docs/05_VWorld_API_활용계획.md`(지도 API), `docs/06_UNI_RAG_챗봇_연동.md`(챗봇 API), `docs/08_T3Q_플랫폼_분석.md`(주관기관 T3Q 데이터 구축 사이트 조회 분석·정합성 대조)
+- 설계 문서: `docs/00_사업수행계획서_분석.md`(사업 컨텍스트) → `DESIGN.md`(아키텍처) → `docs/01_기획서.md`, `docs/02_데이터분석.md`, `docs/03_화면설계.md`, `docs/05_VWorld_API_활용계획.md`(지도 API), `docs/06_UNI_RAG_챗봇_연동.md`(챗봇 API), `docs/08_T3Q_플랫폼_분석.md`(주관기관 T3Q 데이터 구축 사이트 조회 분석·정합성 대조), `docs/09_POC2_설계브리핑.md`(POC2 설계용 자기완결 브리핑 — 외부 LLM 기획 작업 입력)
 
 ## 프로젝트 규칙
 - **디자인**: UNE Design System만 사용(`UNE Design System/une-design-system/project/` — 읽기 전용, 필요 자산은 `apps/web/src/ds/`로 복사). 아이콘은 UNE 250종만, 이모지 금지, UI 문구는 한국어 명사구.
