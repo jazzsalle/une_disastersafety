@@ -1,8 +1,8 @@
 """T6 통합 스모크 — TestClient로 전 엔드포인트 전수 확인.
 
-외부 서버 호출 금지: autouse 픽스처가 ANTHROPIC_API_KEY(api.anthropic.com)와
-UNI_RAG_ACCOUNT(221.147.100.161)를 monkeypatch로 제거해 mock 경로를 고정하고,
-방어적으로 UNI_RAG_BASE_URL도 테스트 전용 호스트로 격리한다.
+외부 서버 호출 금지: autouse 픽스처가 ANTHROPIC_API_KEY(api.anthropic.com)를
+monkeypatch로 제거해 mock 경로를 고정한다. 챗봇은 로컬 직조회(public-demo)라
+외부 호출 경로 자체가 없다.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import re
 
 import pytest
 
-from services import uni_rag
+from services import chatbot
 
 RAG_ID_RE = re.compile(r"^RAG-\d{8}T\d{6}Z-[0-9a-f]{8}$")
 
@@ -21,14 +21,9 @@ EXPECTED_ADMIN_CODES = {"41430", "47190", "45190"}
 
 @pytest.fixture(autouse=True)
 def _no_external_calls(monkeypatch):
-    """실외부 서버(api.anthropic.com·221.147.100.161) 호출 차단 — mock 경로 고정."""
+    """실외부 서버(api.anthropic.com) 호출 차단 — mock 경로 고정."""
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    for name in ("UNI_RAG_ACCOUNT", "UNI_RAG_PASSWORD", "UNI_RAG_MODEL_KEY"):
-        monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("UNI_RAG_BASE_URL", "http://uni-rag.invalid")
-    uni_rag.reset_client()
     yield
-    uni_rag.reset_client()
 
 
 # ── GET 조회 계열 ─────────────────────────────────────────────────────
@@ -151,14 +146,14 @@ def test_ask_citations_and_rag_answer_id(client):
     assert body["geo_refs"]["type"] == "FeatureCollection"
 
 
-def test_chat_mock_mode_fixed(client):
-    """UNI_RAG_ACCOUNT 제거 상태 — mock 경로 고정(외부 호출 없음)."""
+def test_chat_local_mode_fixed(client):
+    """로컬 직조회 챗봇 — 항상 JSON mock 응답(외부 호출 없음)."""
     res = client.post("/api/chat", json={"query": "침수 피해 사례"})
     assert res.status_code == 200
     assert res.headers["x-chat-mode"] == "mock"
     body = res.json()
     assert body["mode"] == "mock"
-    assert uni_rag.MOCK_NOTICE in body["answer"]
+    assert body["notice"] == chatbot.NOTICE
 
 
 # ── OpenAPI 문서 ──────────────────────────────────────────────────────

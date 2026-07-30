@@ -1,21 +1,21 @@
-"""POST /api/chat — UNI RAG 챗봇 서버사이드 프록시 (docs/06_UNI_RAG_챗봇_연동.md).
+"""POST /api/chat — 로컬 데이터 직조회 챗봇 (외부 공개 버전, 로그인 없음).
 
-- 자격증명(UNI_RAG_ACCOUNT/PASSWORD)·JWT는 백엔드 전용 — 프론트에 노출 금지.
-- 실연동 성공: UNI RAG SSE를 text/event-stream으로 중계(X-Chat-Mode: uni_rag).
-- 미설정·실패: 결정적 mock 응답 JSON(mode: "mock", X-Chat-Mode: mock).
-- 어댑터 분리: 실제 호출은 services/uni_rag.chat()만 사용 — 향후 T3Q AI Agent
-  교체 시에도 본 라우터·프론트 계약은 불변.
+- public-demo 브랜치: UNI RAG 프록시·로그인 쿠키를 제거하고 services/chatbot이
+  로컬 코퍼스·정형 JSON을 직접 조회해 결정적 응답을 만든다.
+- 응답은 항상 JSON(mode "mock", X-Chat-Mode: mock) — 프론트 api/client.js의
+  onMock 분기·출처 표기 UI 계약 불변. 정형 질문 즉답은 프론트 answerFromData가
+  백엔드 호출 없이 처리(하이브리드 유지).
+- 어댑터 분리: 향후 T3Q AI Agent 연동 시 services/chatbot만 교체.
 """
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Cookie, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from routers.auth import COOKIE_NAME
-from services import uni_rag
+from services import chatbot
 
 logger = logging.getLogger("disaster.api")
 
@@ -23,7 +23,7 @@ router = APIRouter(tags=["chat"])
 
 
 class ChatMessage(BaseModel):
-    """대화 이력 1건 — UNI RAG history 항목과 동일 구조."""
+    """대화 이력 1건."""
 
     role: str
     content: str
@@ -42,26 +42,14 @@ class ChatBody(BaseModel):
 
 
 @router.post("/chat")
-def post_chat(
-    body: ChatBody,
-    uni_rag_token: str | None = Cookie(default=None, alias=COOKIE_NAME),
-):
-    """챗봇 질의 — 로그인 쿠키(개인 JWT)로 UNI RAG SSE 중계 또는 mock 폴백 JSON."""
-    try:
-        result = uni_rag.chat(
-            query=body.query,
-            history=[m.model_dump() for m in body.history],
-            event=body.event,
-            token=uni_rag_token,
-            poi=body.poi,
-        )
-    except uni_rag.UniRagAuthError:
-        # 토큰 만료·무효 — 프론트가 재로그인 화면으로 유도
-        raise HTTPException(status_code=401, detail="세션이 만료되었습니다. 다시 로그인해 주세요")
-    mode = "uni_rag" if isinstance(result, StreamingResponse) else "mock"
-    # 요청 단위 로그 — 서비스 검증 체크리스트 ⑧. 질의 원문 대신 길이만 기록
-    # (개인정보 유입 가능성 차단), 자격증명·JWT 등 비밀값 미포함.
-    logger.info("chat mode=%s query_len=%d history_len=%d", mode, len(body.query), len(body.history))
-    if isinstance(result, StreamingResponse):
-        return result
+def post_chat(body: ChatBody):
+    """챗봇 질의 — 로컬 코퍼스·정형 JSON 직조회 결정적 응답."""
+    result = chatbot.answer(
+        query=body.query,
+        history=[m.model_dump() for m in body.history],
+        event=body.event,
+        poi=body.poi,
+    )
+    # 요청 단위 로그 — 질의 원문 대신 길이만 기록(개인정보 유입 가능성 차단)
+    logger.info("chat mode=mock query_len=%d history_len=%d", len(body.query), len(body.history))
     return JSONResponse(content=result, headers={"X-Chat-Mode": "mock"})

@@ -22,10 +22,10 @@ NIA 「재난안전 AI데이터 구축」 사업(티쓰리큐 컨소시엄)에�
 - 백엔드 테스트: `cd apps/api && python -m pytest`
 - 프론트: `cd apps/web && npm install && npm run dev` (빌드 검증: `npm run build`)
 - LLM(근거응답 /api/ask): 환경변수 `ANTHROPIC_API_KEY` 설정 시 Claude API(claude-sonnet-5), 미설정 시 mock 폴백
-- 챗봇(/api/chat): UNI RAG System main chat API(`POST /chat/`, SSE) 서버사이드 프록시 — `UNI_RAG_BASE_URL`·`UNI_RAG_ACCOUNT`·`UNI_RAG_PASSWORD`(UNE 계정, `/auth/login` JWT). 미설정/실패 시 mock 폴백. 자격증명은 백엔드 .env 전용(프론트 노출·커밋 금지). 상세 `docs/06_UNI_RAG_챗봇_연동.md`
+- 챗봇(/api/chat): **(public-demo 브랜치)** 로컬 데이터 직조회 — `services/chatbot.py`가 BM25(retrieval)+키워드 매칭 폴백으로 코퍼스·정형 JSON에서 결정적 응답 생성(항상 JSON, `X-Chat-Mode: mock`). 정형 질문 즉답은 프론트 chatAgent.js answerFromData(하이브리드 유지). UNI RAG 프록시·`UNI_RAG_*` 환경변수 제거(master의 연동 구현은 `docs/06_UNI_RAG_챗봇_연동.md` 참조)
 - 지도: 환경변수 `VITE_VWORLD_API_KEY`(프론트 타일)·`VWORLD_API_KEY`(파이프라인 지오코더·2D데이터) — VWorld 인증키(www.vworld.kr 발급·도메인 등록, 하나의 키 공용). 미설정 시 지도 영역에 키 발급 안내 표시(다른 배경지도로 대체하지 않음). 사용 API·엔드포인트는 `docs/05_VWorld_API_활용계획.md` 준수
-- 로그인: 앱 진입 시 UNE 개인 계정 로그인 게이트(`/api/auth/login` — UNI RAG 로그인 프록시, JWT httpOnly 쿠키). 챗봇은 이 쿠키 토큰으로 상류 호출(401 시 재로그인 유도). `UNI_RAG_ACCOUNT` 환경변수는 로컬 개발용 폴백
-- 배포: Vercel — `vercel.json`(프론트 정적 빌드 + `api/index.py` 서버리스, 서울 icn1). 런타임 데이터는 data/processed 5종 커밋본을 includeFiles로 번들. Vercel 환경변수는 `VITE_VWORLD_API_KEY`·`UNI_RAG_BASE_URL`만(계정은 개인 로그인이라 불필요)
+- 로그인: **(public-demo 브랜치)** 없음 — 외부 공개용으로 로그인 게이트·`/api/auth/*` 라우터 전부 제거(앱 즉시 진입)
+- 배포: Vercel — `vercel.json`(프론트 정적 빌드 + `api/index.py` 서버리스, 서울 icn1). 런타임 데이터는 data/processed 5종 커밋본을 includeFiles로 번들. Vercel 환경변수는 `VITE_VWORLD_API_KEY`만 필요(Preview 환경 포함 설정 완료)
 
 ## Phase
 

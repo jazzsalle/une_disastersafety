@@ -14,6 +14,7 @@
  * - chat({query, history, event, onDelta, onDone, onMock, signal})
  *     응답 헤더 X-Chat-Mode / Content-Type으로 분기:
  *     - text/event-stream → SSE 파싱(data: 라인 누적) → onDelta(delta, fullText) 반복
+ *       (public-demo 브랜치 백엔드는 미사용 — 향후 T3Q 연동 대비 유지)
  *     - JSON(mock)        → onMock({mode:"mock", notice, answer, excerpts[], query})
  *     종료 시 onDone({mode, text}) 호출, 동일 값 resolve.
  *
@@ -69,23 +70,6 @@ async function postJson(path, body) {
   });
   await raiseForStatus(res, path);
   return res.json();
-}
-
-// ── auth (UNI RAG 개인 계정 로그인 — httpOnly 쿠키, 클라이언트 저장 없음) ──
-
-/** GET /api/auth/me → {logged_in: boolean} */
-export function authMe() {
-  return getJson('/auth/me');
-}
-
-/** POST /api/auth/login {account, password} → {ok} (401: 자격증명 오류, 502: 상류 연결 실패) */
-export function authLogin({ account, password }) {
-  return postJson('/auth/login', { account, password });
-}
-
-/** POST /api/auth/logout → {ok} */
-export function authLogout() {
-  return postJson('/auth/logout', {});
 }
 
 // ── GET ──────────────────────────────────────────────────────────────
@@ -178,7 +162,7 @@ function extractDelta(obj) {
 }
 
 /**
- * POST /api/chat — UNI RAG SSE 중계 또는 mock JSON 폴백 (백엔드 routers/chat.py 계약).
+ * POST /api/chat — 로컬 직조회 JSON 응답(현행) 또는 SSE 중계(향후 연동 대비) — 백엔드 routers/chat.py 계약.
  *
  * 스트림 후처리(이 함수가 유일한 구현 지점):
  * - thinking 제거: 모델이 추론 과정을 본문으로 스트리밍하고 `</think>` 뒤에 실답변이

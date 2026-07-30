@@ -8,12 +8,11 @@
  * - 자연어 지도 명령("남원으로 이동", "안양천지구 보여줘") → parseMapCommand로
  *   LLM 호출 없이 지도 조작 + 확인 메시지
  * - 대화 목록: state.chatMessages(user/assistant 말풍선), 자동 스크롤
- * - mock: onMock 완성 응답 + "mock 응답" Badge + notice 문구 + excerpts 출처 표기
+ * - 응답은 항상 로컬 직조회(onMock) — "로컬 데이터 응답" Badge + notice + excerpts 출처 표기
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppState } from '../../state/AppState.jsx';
 import { chat, districts, rivers } from '../../api/client.js';
-import { requireLogin } from '../auth/LoginGate.jsx';
 import {
   answerFromData,
   buildEntities,
@@ -191,7 +190,7 @@ export default function ChatTab() {
           actions.updateLastChatMessage({
             content: data?.answer || '',
             mode: 'mock',
-            notice: data?.notice || 'UNI RAG 미연결 mock 응답',
+            notice: data?.notice || '로컬 데이터 기반 응답',
             excerpts: Array.isArray(data?.excerpts) ? data.excerpts : [],
             streaming: false,
           });
@@ -206,16 +205,6 @@ export default function ChatTab() {
         },
       });
     } catch (err) {
-      if (err?.status === 401) {
-        // 세션 만료 — 로그인 게이트로 복귀
-        actions.updateLastChatMessage({
-          content: '세션이 만료되었습니다. 다시 로그인해 주세요',
-          streaming: false,
-          error: true,
-        });
-        requireLogin();
-        return;
-      }
       actions.updateLastChatMessage({
         content: '응답 수신 실패',
         streaming: false,
@@ -249,7 +238,7 @@ export default function ChatTab() {
               <div className="ask-bubble-meta">
                 {/* DS Badge 변형은 mode=light·size md/lg/xl만 존재 — light·md 고정 */}
                 <Badge
-                  label="mock 응답"
+                  label="로컬 데이터 응답"
                   variant="outline"
                   color="warning"
                   size="md"

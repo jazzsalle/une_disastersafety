@@ -7,7 +7,6 @@
  * 패널 교체는 각 스텁 파일(components/**)만 대상 — 사용 계약은 스텁 상단 주석 참조.
  */
 import { AppStateProvider } from './state/AppState.jsx';
-import LoginGate from './components/auth/LoginGate.jsx';
 import AppHeader from './components/AppHeader.jsx';
 import AppToast from './components/AppToast.jsx';
 import SituationPanel from './components/situation/SituationPanel.jsx';
@@ -19,7 +18,6 @@ import './app.css';
 export default function App() {
   return (
     <AppStateProvider>
-      <LoginGate>
       <div className="app-shell">
         <header className="app-header">
           <AppHeader />
@@ -42,7 +40,6 @@ export default function App() {
         </main>
         <AppToast />
       </div>
-      </LoginGate>
     </AppStateProvider>
   );
 }

@@ -1,7 +1,22 @@
 # PROGRESS
 
 ## Last updated
-2026-07-27 (집 PC 세션 종료 — 회사 PC 인계)
+2026-07-30 (public-demo 브랜치 — 외부 공개용 로그인 제거 버전, 최신 master 기반)
+
+## 2026-07-30 작업 (public-demo 브랜치)
+- **외부 공개용 버전**: 최신 master(c630da2 — 챗봇 칩·정형 즉답 하이브리드·사례 검색 포함)에서
+  분기 — 로그인 절차 전면 제거(LoginGate·로그아웃·`/api/auth/*`·requireLogin 401 분기, 즉시 진입)
+- **UNI RAG 연동 제거**: `services/uni_rag.py` 삭제 → `services/chatbot.py` 신설 — 로컬 코퍼스·정형
+  JSON 직조회(BM25 우선, 키워드 매칭 폴백) 결정적 응답(항상 JSON, X-Chat-Mode: mock).
+  master의 판단기준(Q1) 주입·하천 수위계/기준유량 주입 로직은 로컬 응답에 이식.
+  프론트 정형 질문 즉답(answerFromData)·질문 칩은 그대로 동작(백엔드 무관)
+- 배지 문구 "mock 응답" → "로컬 데이터 응답". `UNI_RAG_*` 환경변수 불필요
+- 테스트: test_auth 삭제·test_chat 재작성(로컬 계약·판단기준 병기·auth 404) — 94건 통과
+- **주의**: 이 브랜치는 공개 데모 전용 — master로 머지 금지. 이전 `public-mock` 브랜치는
+  구버전(24ef6d0) 기반이라 폐기 대상(원격 삭제 필요)
+- 공개 URL: **https://une-disaster-demo.vercel.app** (Vercel Deployment Protection 해제됨,
+  `VITE_VWORLD_API_KEY` Preview 환경 설정됨). 재배포 후 `npx vercel alias set <배포 URL>
+  une-disaster-demo.vercel.app` 재실행 필요(git 브랜치 별칭은 자동 갱신)
 
 ## 회사 PC 인계 사항 (2026-07-27)
 1. **git pull만 하면 됨** — 전부 push·Vercel 배포 반영 완료(최종 7445d74).
